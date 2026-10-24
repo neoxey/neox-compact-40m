@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navaneeth Compact 40M v2.0 – Interaktiver 3D-CAD-Viewer &amp; 60-FPS-Kinematiksimulator</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0b1120; color: #f1f5f9; overflow: hidden; height: 100vh; display: flex; flex-direction: column; user-select: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .active-tab { border-bottom: 2px solid #14b8a6; color: #2dd4bf !important; background: rgba(20, 184, 166, 0.14); }
+    .part-row-selected { background: rgba(20, 184, 166, 0.25) !important; border-left: 3px solid #14b8a6; }
+    .hidden { display: none !important; }
+    /* Offline fallback layout rules when Tailwind CDN is unreachable */
+    .app-header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .app-grid { display: grid; grid-template-columns: 270px 1fr 350px; flex: 1; min-height: 0; overflow: hidden; }
+    @media (max-width: 1024px) { .app-grid { grid-template-columns: 1fr; } }
+    .hud-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.92); border-bottom: 1px solid #1e293b; }
+    .hud-card { background: rgba(30, 41, 59, 0.9); border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; }
+    .ctrl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { cursor: pointer; border-radius: 5px; font-size: 12px; font-weight: 600; padding: 6px 11px; border: 1px solid transparent; transition: all 0.15s; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #3b82f6; }
+    .btn-teal { background: #0d9488; color: #fff; }
+    .btn-teal:hover { background: #14b8a6; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #f59e0b; }
+    .btn-slate { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+    .btn-slate:hover { background: #334155; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col select-none">
+
+  <!-- TOP HEADER & GLOBAL CONTROLS -->
+  <header class="app-header bg-slate-900/95 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 z-20">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:10px;height:36px;border-radius:4px;background:linear-gradient(180deg,#2dd4bf,#2563eb);"></div>
+      <div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+          <h1 style="margin:0;font-size:15px;font-weight:700;color:#fff;">Navaneeth Compact 40M v2.0 – Interaktiver 3D-CAD- &amp; Kinematik-Simulator</h1>
+          <span style="padding:2px 8px;font-size:11px;font-weight:600;border-radius:4px;background:#042f2e;color:#5eead4;border:1px solid #0f766e;">Koaxiale 60-FPS-Engine • 0,00 mm Exzentrizität</span>
+          <span id="fpsBadge" style="padding:2px 8px;font-size:11px;font-family:monospace;border-radius:4px;background:#1e293b;color:#34d399;border:1px solid #334155;">60 FPS</span>
+        </div>
+        <p style="margin:2px 0 0 0;font-size:11.5px;color:#94a3b8;">Exakte Drehachsen: Hauptspindel (Y=0, Z=150,0 mm) &amp; Führungsrolle (Y=0, Z=285,0 mm) • Trockenmasse: 3,097 kg • 27 Baugruppen &amp; 34 Befestiger</p>
+      </div>
+    </div>
+
+    <!-- Camera & Animation Quick Toolbar -->
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;background:#1e293b;border-radius:6px;padding:2px;border:1px solid #334155;margin-right:4px;">
+        <button id="btnCamIso" class="btn" style="background:#0f766e;color:#fff;padding:4px 8px;font-size:11px;">3D Iso</button>
+        <button id="btnCamXZ" class="btn" style="background:transparent;color:#cbd5e1;padding:4px 8px;font-size:11px;">Seite (X-Z)</button>
+        <button id="btnCamYZ" class="btn" style="background:transparent;color:#cbd5e1;padding:4px 8px;font-size:11px;">Vorne (Y-Z)</button>
+        <button id="btnCamXY" class="btn" style="background:transparent;color:#cbd5e1;padding:4px 8px;font-size:11px;">Oben (X-Y)</button>
+      </div>
+
+      <button id="btnWindToggle" class="btn btn-blue">▶ 40m-Wickelsimulation</button>
+      <button id="btnSpinToggle" class="btn btn-teal">▶ Drehanimation</button>
+      <button id="btnRemovalAnim" class="btn btn-amber">▶ +X Entnahme-Demo</button>
+
+      <div style="display:flex;align-items:center;gap:4px;background:#1e293b;border-radius:5px;padding:4px 8px;border:1px solid #334155;font-size:11px;">
+        <span style="color:#94a3b8;">Tempo:</span>
+        <select id="selAnimSpeed" style="background:transparent;color:#5eead4;font-weight:700;border:none;outline:none;cursor:pointer;">
+          <option value="0.5" style="background:#0f172a;">0,5× (Zeitlupe)</option>
+          <option value="1" selected style="background:#0f172a;">1,0× (Standard)</option>
+          <option value="2" style="background:#0f172a;">2,0× (Schnell)</option>
+          <option value="4" style="background:#0f172a;">4,0× (Turbo)</option>
+        </select>
+      </div>
+
+      <button id="btnResetAll" class="btn btn-slate">↺ Reset</button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE GRID -->
+  <div class="app-grid flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[680px]">
+
+    <!-- LEFT SIDEBAR: COMPONENT TREE & VISIBILITY -->
+    <aside class="lg:col-span-3 bg-slate-900/95 border-r border-slate-800 flex flex-col" style="background:#0f172a;border-right:1px solid #1e293b;display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <div style="padding:10px 12px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#cbd5e1;">Komponentenbaum (27)</span>
+        <div style="display:flex;gap:4px;">
+          <button id="btnShowAllParts" class="btn btn-slate" style="padding:2px 8px;font-size:11px;color:#5eead4;">Alle zeigen</button>
+          <button id="btnIsolateSelected" class="btn btn-slate" style="padding:2px 8px;font-size:11px;color:#fcd34d;">Isolieren</button>
+        </div>
+      </div>
+      <div style="padding:8px 12px;border-bottom:1px solid #1e293b;">
+        <input id="inputTreeFilter" type="text" placeholder="Teile-ID oder Name filtern (z.B. P-07, Lager)..." style="width:100%;padding:6px 10px;font-size:12px;border-radius:4px;background:#1e293b;border:1px solid #334155;color:#f1f5f9;outline:none;">
+      </div>
+      <div id="componentTreeContainer" style="flex:1;overflow-y:auto;padding:6px;"></div>
+    </aside>
+
+    <!-- CENTER: 3D VIEWPORT + 2D KINEMATIC MONITOR + INTERACTIVE CONTROLS -->
+    <main class="lg:col-span-5 relative bg-slate-950 flex flex-col justify-between" style="background:#020617;display:flex;flex-direction:column;justify-content:space-between;height:100%;min-height:0;overflow:hidden;">
+      <!-- Top Overlay Telemetry HUD -->
+      <div class="hud-grid">
+        <div class="hud-card">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;">Aufgewickeltes Band</div>
+          <div id="hudTapeLen" style="font-size:14px;font-weight:700;color:#2dd4bf;font-family:monospace;">40,0 m / 40,0 m</div>
+          <div id="hudLaneInfo" style="font-size:11px;color:#cbd5e1;">Spur 4 (X=97 mm) • 86,8 Umdr.</div>
+        </div>
+        <div class="hud-card">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;">Aktueller Rollenradius</div>
+          <div id="hudCoilRad" style="font-size:14px;font-weight:700;color:#60a5fa;font-family:monospace;">R = 96,58 mm</div>
+          <div id="hudFlangeMargin" style="font-size:11px;color:#34d399;">Reserve zu Ø220: 13,42 mm</div>
+        </div>
+        <div class="hud-card">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;">Kinematik &amp; Drehmoment</div>
+          <div id="hudRpmTime" style="font-size:14px;font-weight:700;color:#fcd34d;font-family:monospace;">21,7 rpm • 4:00 min</div>
+          <div id="hudTorqueVal" style="font-size:11px;color:#cbd5e1;">M = 3,38 Nm (v = 0,22 m/s)</div>
+        </div>
+        <div class="hud-card">
+          <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;">Ausgewähltes Bauteil</div>
+          <div id="hudSelectedId" style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">P-07 Hauptspindel</div>
+          <div id="hudSelectedMass" style="font-size:11px;color:#5eead4;">C45E +QT • 0,395 kg</div>
+        </div>
+      </div>
+
+      <!-- 3D Canvas Container -->
+      <div id="canvas3dWrapper" style="position:relative;flex:1;width:100%;min-height:180px;cursor:grab;overflow:hidden;">
+        <canvas id="cadCanvas" style="position:absolute;inset:0;width:100%;height:100%;display:block;"></canvas>
+
+        <!-- Axis & Status Banner Inside Viewport -->
+        <div style="position:absolute;top:10px;left:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;pointer-events:none;">
+          <span style="padding:3px 8px;border-radius:4px;background:rgba(15,23,42,0.92);border:1px solid rgba(20,184,166,0.45);font-size:11px;color:#5eead4;font-family:monospace;">
+            ⟳ Spindelachse: Y=0, Z=150,0 mm (Koaxial)
+          </span>
+          <span style="padding:3px 8px;border-radius:4px;background:rgba(15,23,42,0.92);border:1px solid rgba(59,130,246,0.45);font-size:11px;color:#93c5fd;font-family:monospace;">
+            ⟳ Führungsrolle: Y=0, Z=285,0 mm
+          </span>
+          <span id="hudStatusBanner" style="padding:3px 8px;border-radius:4px;background:rgba(6,78,59,0.92);border:1px solid rgba(16,185,129,0.5);font-size:11px;color:#6ee7b7;font-weight:600;">
+            ✓ Bereit (40,0 m gewickelt &amp; 3-fach umreift)
+          </span>
+        </div>
+
+        <!-- Helper Overlay -->
+        <div style="position:absolute;bottom:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;pointer-events:none;">
+          <div style="padding:4px 10px;border-radius:4px;background:rgba(15,23,42,0.88);border:1px solid #334155;font-size:11px;color:#cbd5e1;">
+            Links ziehen: 3D-Drehen • Rechts/Shift ziehen: Verschieben • Mausrad: Zoom • Klick: Bauteil-Inspektor
+          </div>
+          <label style="pointer-events:auto;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;background:rgba(15,23,42,0.92);border:1px solid #334155;font-size:11px;color:#e2e8f0;cursor:pointer;">
+            <input id="chkShowAxes" type="checkbox" checked>
+            <span>Drehachsen &amp; Richtungsringe</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Synchronized 2D Kinematic Cross-Section Monitor (X-Z & Y-Z Live Schematic) -->
+      <div style="background:#0f172a;border-top:1px solid #1e293b;padding:8px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px;">
+          <span style="font-weight:700;color:#5eead4;text-transform:uppercase;">Live 2D-Kinematik-Querschnitt (Längsschnitt X-Z: 2°-Konus &amp; 4-Spur-Traverse | Querschnitt Y-Z: Koaxialer Bandlauf)</span>
+          <span id="kinematicSubLabel" style="font-family:monospace;color:#cbd5e1;">Spur 4 aktiv (X = 97,0 mm) • R_coil = 96,58 mm</span>
+        </div>
+        <div style="position:relative;width:100%;height:105px;border-radius:6px;background:#020617;border:1px solid #1e293b;overflow:hidden;">
+          <canvas id="kinematic2dCanvas" style="position:absolute;inset:0;width:100%;height:100%;display:block;"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom Interactive Sliders: Winding, Explosion, Removal Sequence & Section Cut -->
+      <div style="padding:10px 12px;background:#0f172a;border-top:1px solid #1e293b;display:flex;flex-direction:column;gap:8px;">
+        <div class="ctrl-grid">
+          <!-- Winding Slider -->
+          <div style="background:rgba(30,41,59,0.75);padding:8px 10px;border-radius:6px;border:1px solid #334155;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+              <span style="font-weight:600;color:#93c5fd;">Wickelstatus L (0–40 m über 4 Spuren):</span>
+              <span id="lblWindPct" style="font-family:monospace;color:#fff;">40,0 m (100%)</span>
+            </div>
+            <input id="sliderWinding" type="range" min="0" max="100" step="0.5" value="100" style="width:100%;cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:2px;font-family:monospace;">
+              <span>0m (Leer)</span>
+              <span>Spur 1 (10m)</span>
+              <span>Spur 2 (20m)</span>
+              <span>Spur 3 (30m)</span>
+              <span>Spur 4 (40m)</span>
+            </div>
+          </div>
+
+          <!-- Explosion Slider -->
+          <div style="background:rgba(30,41,59,0.75);padding:8px 10px;border-radius:6px;border:1px solid #334155;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+              <span style="font-weight:600;color:#5eead4;">Baugruppen-Explosion (0–100%):</span>
+              <span id="lblExplodePct" style="font-family:monospace;color:#fff;">0% (Montiert)</span>
+            </div>
+            <input id="sliderExplode" type="range" min="0" max="100" step="1" value="0" style="width:100%;cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:2px;">
+              <span>0% Zusammengebaut</span>
+              <button id="btnToggleExplodeAnim" style="background:none;border:none;color:#2dd4bf;font-weight:600;cursor:pointer;font-size:10px;">↔ Explosions-Fahrt</button>
+              <span>100% Explodiert</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Roll Removal Sequence (+X) & Section Plane Controls -->
+        <div class="ctrl-grid">
+          <div style="background:rgba(30,41,59,0.75);padding:8px 10px;border-radius:6px;border:1px solid #334155;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px;">
+              <span style="font-weight:600;color:#fcd34d;">Rollen-Entnahme (+X Sequenz):</span>
+              <span id="lblRemovalStep" style="font-size:11px;color:#cbd5e1;">0: Betriebsbereit</span>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button data-rem="0" class="btn-rem btn" style="flex:1;padding:4px 2px;font-size:11px;background:#0f766e;color:#fff;">0. Bereit</button>
+              <button data-rem="1" class="btn-rem btn" style="flex:1;padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">1. Pin +Z</button>
+              <button data-rem="2" class="btn-rem btn" style="flex:1;padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">2. Scheibe</button>
+              <button data-rem="3" class="btn-rem btn" style="flex:1;padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">3. Flansch</button>
+              <button data-rem="4" class="btn-rem btn" style="flex:1;padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">4. Rolle +X</button>
+            </div>
+          </div>
+
+          <div style="background:rgba(30,41,59,0.75);padding:8px 10px;border-radius:6px;border:1px solid #334155;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px;">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:600;color:#fda4af;cursor:pointer;">
+                <input id="chkSectionCut" type="checkbox">
+                <span>3D-Schnittansicht</span>
+              </label>
+              <select id="selSectionAxis" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:11px;">
+                <option value="Y">Schnittebene Y (Längsschnitt X-Z)</option>
+                <option value="X">Schnittebene X (Querschnitt Y-Z)</option>
+                <option value="Z">Schnittebene Z (Horizontalschnitt)</option>
+              </select>
+            </div>
+            <input id="sliderSectionPos" type="range" min="-150" max="200" value="0" style="width:100%;cursor:pointer;">
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR: INSPECTOR TABS (DETAILS, FASTENERS, JOINTS, CHECKS, EXPORT) -->
+    <aside class="lg:col-span-4 bg-slate-900/95 border-l border-slate-800 flex flex-col" style="background:#0f172a;border-left:1px solid #1e293b;display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <!-- Tabs Navigation -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid #1e293b;font-size:11px;font-weight:600;color:#94a3b8;">
+        <button data-tab="part" class="tab-btn active-tab" style="padding:10px 4px;text-align:center;background:none;border:none;color:inherit;cursor:pointer;">Bauteil</button>
+        <button data-tab="fasteners" class="tab-btn" style="padding:10px 4px;text-align:center;background:none;border:none;color:inherit;cursor:pointer;">Schrauben (34)</button>
+        <button data-tab="joints" class="tab-btn" style="padding:10px 4px;text-align:center;background:none;border:none;color:inherit;cursor:pointer;">Passungen (11)</button>
+        <button data-tab="checks" class="tab-btn" style="padding:10px 4px;text-align:center;background:none;border:none;color:inherit;cursor:pointer;">Kinematik &amp; Prüf.</button>
+        <button data-tab="export" class="tab-btn" style="padding:10px 4px;text-align:center;background:none;border:none;color:inherit;cursor:pointer;">CAD-Exports</button>
+      </div>
+
+      <!-- Tab 1: Selected Part Details -->
+      <div id="tabContent_part" class="tab-panel" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:12px;border-radius:8px;background:rgba(30,41,59,0.9);border:1px solid #334155;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span id="inspPartId" style="padding:2px 8px;font-size:12px;font-weight:700;border-radius:4px;background:#0d9488;color:#fff;">P-07</span>
+            <span id="inspPartDrw" style="font-size:11px;font-family:monospace;color:#94a3b8;">Zeichnung: DRW-P07-v2</span>
+          </div>
+          <h2 id="inspPartName" style="margin:6px 0 2px 0;font-size:14px;font-weight:700;color:#fff;">Hauptspindel Ø17,00 k5 mit 3/8"-Antriebszapfen</h2>
+          <p id="inspPartGroup" style="margin:0;font-size:12px;color:#2dd4bf;">Baugruppe: Spindel &amp; Lagerung</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;">
+            <div style="color:#94a3b8;font-size:11px;">Werkstoff &amp; Zustand</div>
+            <div id="inspPartMat" style="font-weight:600;color:#fff;margin-top:2px;">C45E +QT (1.1191)</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;">
+            <div style="color:#94a3b8;font-size:11px;">Anzahl &amp; Masse</div>
+            <div id="inspPartMass" style="font-weight:600;color:#34d399;margin-top:2px;">1 Stk • 0,395 kg</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;grid-column:span 2;">
+            <div style="color:#94a3b8;font-size:11px;">Herstellungsverfahren</div>
+            <div id="inspPartProc" style="font-weight:500;color:#e2e8f0;margin-top:2px;">CNC-Drehen + Fräsen + Rundschleifen</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;grid-column:span 2;">
+            <div style="color:#94a3b8;font-size:11px;">Hauptabmessungen [mm]</div>
+            <div id="inspPartDims" style="font-family:monospace;color:#e2e8f0;margin-top:2px;">Welle Ø17,00 k5 × 212 + Schulter Ø20×6 + 3/8"-Sechskant SW9,5×36 mm</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;grid-column:span 2;">
+            <div style="color:#94a3b8;font-size:11px;">Bohrungen, Passungen &amp; Toleranzen</div>
+            <div id="inspPartFits" style="color:#fcd34d;font-weight:500;margin-top:2px;">Lagersitz Ø17,00 k5 (+2/+10 µm), Querloch Ø6,0 (X=-9), Pinloch Ø6,2 (X=122)</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;grid-column:span 2;">
+            <div style="color:#94a3b8;font-size:11px;">Globale XYZ-Einbaulage [mm]</div>
+            <div id="inspPartXyz" style="font-family:monospace;color:#5eead4;margin-top:2px;">X=[-120..128], Y=0, Z=150</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;">
+            <div style="color:#94a3b8;font-size:11px;">Verbundene Bauteile</div>
+            <div id="inspPartMates" style="font-weight:500;color:#e2e8f0;margin-top:2px;">P-01, P-04..06, P-08, P-10</div>
+          </div>
+          <div style="padding:9px;border-radius:6px;background:rgba(30,41,59,0.6);border:1px solid #334155;">
+            <div style="color:#94a3b8;font-size:11px;">Zugehörige Befestiger</div>
+            <div id="inspPartFast" style="font-family:monospace;color:#e2e8f0;margin-top:2px;">F-21 (M6×50 FK 8.8)</div>
+          </div>
+        </div>
+
+        <!-- Montage Step Player -->
+        <div style="padding:10px;border-radius:8px;background:rgba(30,41,59,0.8);border:1px solid #334155;">
+          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:6px;">Geführte Baugruppen-Montagereihenfolge (Schritt 1–5)</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">
+            <button data-assy="1" class="btn-assy btn" style="padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">1. Rahmen</button>
+            <button data-assy="2" class="btn-assy btn" style="padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">2. Chassis</button>
+            <button data-assy="3" class="btn-assy btn" style="padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">3. Spindel</button>
+            <button data-assy="4" class="btn-assy btn" style="padding:4px 2px;font-size:11px;background:#334155;color:#e2e8f0;">4. Trommel</button>
+            <button data-assy="5" class="btn-assy btn" style="padding:4px 2px;font-size:11px;background:#0f766e;color:#fff;">5. Komplett</button>
+          </div>
+          <p id="lblAssyStepDesc" style="margin:6px 0 0 0;font-size:11px;color:#cbd5e1;">Alle 5 Montagegruppen aktiv und vollständig montiert.</p>
+        </div>
+      </div>
+
+      <!-- Tab 2: Fastener Register -->
+      <div id="tabContent_fasteners" class="tab-panel hidden" style="flex:1;overflow-y:auto;padding:12px;">
+        <div style="font-size:12px;color:#cbd5e1;margin-bottom:8px;">Klicken Sie auf eine Schraubengruppe, um deren exakte 3D-Position mit einem gelben Leuchtmarker anzuzeigen:</div>
+        <div id="fastenerListContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- Tab 3: Joints / Mating Register -->
+      <div id="tabContent_joints" class="tab-panel hidden" style="flex:1;overflow-y:auto;padding:12px;">
+        <div style="font-size:12px;color:#cbd5e1;margin-bottom:8px;">Klicken Sie auf eine Verbindung (JNT-01..11), um die gepaarten Bauteile A (türkis) und B (orange) hervorzuheben:</div>
+        <div id="jointListContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- Tab 4: Kinematics, Collision Check & Open Risks -->
+      <div id="tabContent_checks" class="tab-panel hidden" style="flex:1;overflow-y:auto;padding:12px;font-size:12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:12px;border-radius:6px;background:rgba(19,78,74,0.45);border:1px solid #0f766e;">
+          <div style="font-weight:700;color:#5eead4;">✓ Koaxiale Rotations- &amp; Wickelkinematik (Verifiziert)</div>
+          <ul style="margin:6px 0 0 0;padding-left:16px;color:#e2e8f0;line-height:1.5;">
+            <li><strong>Hauptspindel-Drehachse (Y=0, Z=150,0 mm):</strong> P-01, P-02, P-03, P-04, P-05, P-06, P-07, P-10, REF-01 sowie die Mitnehmerschrauben F-11..F-16 und F-21 rotieren exakt konzentrisch um (Y=0, Z=150,0 mm).</li>
+            <li><strong>Führungsrollen-Drehachse (Y=0, Z=285,0 mm):</strong> POM-C-Rolle P-15 (Ø38 mm auf 2× SKF 6002-2RS) rotiert schlupffrei mit der aktuellen Bandgeschwindigkeit <code>ω_rolle = ω_spindel × (R_coil / 19,0 mm)</code>.</li>
+            <li><strong>4-Spur-Bandtraverse (X = 19, 45, 71, 97 mm):</strong> Der Bandpfad läuft vom stationären Ventil durch Zugentlastungsklemme P-22 über Führungsrolle P-15 tangential auf den wachsenden Rollenradius <code>R(L) = 50,08 → 96,58 mm</code>.</li>
+          </ul>
+        </div>
+        <div style="padding:12px;border-radius:6px;background:rgba(6,78,59,0.45);border:1px solid #047857;">
+          <div style="font-weight:700;color:#6ee7b7;">✓ 3D-CAD-Kollisions- &amp; Passungsprüfung bestanden</div>
+          <ul style="margin:6px 0 0 0;padding-left:16px;color:#e2e8f0;line-height:1.5;">
+            <li><strong>Spindel &amp; Lager 6003-2RS (REV-03):</strong> Ø17,00 k5 in d=17,00 mm, Gehäuse Ø35,00 H7 mit Innenschulter Ø31 mm (SF = 5,80).</li>
+            <li><strong>Führungsachse &amp; Lager 6002-2RS (REV-02):</strong> Schulter Ø16,0 mm / Lagersitz Ø15,00 k5 für d=15,00 mm (SF = 6,94).</li>
+            <li><strong>Bodenfreiheit (REV-05):</strong> Fußplatte Z=12..18 mm, alle M6-Schrauben in +Z gedreht (min. Z = 12,0 mm).</li>
+            <li><strong>3-Punkt-Umreifung &amp; +X Entnahme (REV-01):</strong> 3 Schlitze (16×58 mm bei 0°/120°/240°) + 3 Kanäle (16×6 mm), 2,0°-Konus frei.</li>
+          </ul>
+        </div>
+        <div style="padding:12px;border-radius:6px;background:rgba(120,53,15,0.45);border:1px solid #b45309;">
+          <div style="font-weight:700;color:#fcd34d;">⚠ Sichtbare Sicherheits- &amp; Freigabe-Gates (Vor Serienfreigabe)</div>
+          <p style="margin:6px 0 0 0;color:#e2e8f0;line-height:1.45;"><strong>RISK-01 (Kinematik Ventilanschluss):</strong> Wickeln erfolgt vom freien Feldende Richtung stationäres Ventil; das ventilseitige Bandende wird in Zugentlastungsklemme P-22 geparkt (0 N Ventillast).</p>
+          <p style="margin:6px 0 0 0;color:#e2e8f0;line-height:1.45;"><strong>RISK-02 (Untersetzung i = 16:1):</strong> Für 21,7 rpm Spindeldrehzahl (4,0 min Wickelzeit) ist zwischen INGCO CIDLI12206 (0–400 rpm) und Spindel P-07 ein Vorsatz-Planetengetriebe i = 12:1 bis 16:1 erforderlich.</p>
+        </div>
+      </div>
+
+      <!-- Tab 5: Export & Download Status -->
+      <div id="tabContent_export" class="tab-panel hidden" style="flex:1;overflow-y:auto;padding:14px;font-size:12px;display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:12px;border-radius:6px;background:#1e293b;border:1px solid #334155;display:flex;flex-direction:column;gap:8px;">
+          <div style="font-weight:700;color:#fff;">Direkter Daten- &amp; 3D-Geometrieexport (Im Browser)</div>
+          <p style="margin:0;color:#cbd5e1;">Exportieren Sie die aktuelle Stückliste, das Befestigerregister oder das ausgewählte 3D-Bauteil direkt als Datei:</p>
+          <button id="btnExportSelectedSTL" class="btn btn-teal" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+            <span>⬇ Ausgewähltes 3D-Bauteil als ASCII-STL exportieren</span>
+            <span style="font-family:monospace;font-size:11px;background:#115e59;padding:2px 6px;border-radius:4px;">.STL</span>
+          </button>
+          <button id="btnExportBomCSV" class="btn btn-blue" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+            <span>⬇ Vollständige Stückliste (BOM &amp; Massen) exportieren</span>
+            <span style="font-family:monospace;font-size:11px;background:#1e40af;padding:2px 6px;border-radius:4px;">.CSV</span>
+          </button>
+          <button id="btnExportSsotJSON" class="btn btn-slate" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+            <span>⬇ Komplettes CAD-Parameter- &amp; Fastener-Register</span>
+            <span style="font-family:monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;">.JSON</span>
+          </button>
+        </div>
+
+        <div style="padding:12px;border-radius:6px;background:rgba(30,41,59,0.7);border:1px solid #334155;line-height:1.7;">
+          <div style="font-weight:700;color:#5eead4;margin-bottom:4px;">Status des Gesamtpakets (Revision 2.0)</div>
+          <div style="color:#cbd5e1;">✓ <code>Navaneeth_Compact_40M_v2_Assembled.glb</code> (Montiert)</div>
+          <div style="color:#cbd5e1;">✓ <code>Navaneeth_Compact_40M_v2_Exploded.glb</code> (Explodiert)</div>
+          <div style="color:#cbd5e1;">✓ <code>CAD/STL/*.stl</code> (28 Einzelteil- &amp; Baugruppen-STLs)</div>
+          <div style="color:#cbd5e1;">✓ <code>CAD/STEP/*.step</code> (ISO 10303-21 AP214 Baugruppe &amp; Teile)</div>
+          <div style="color:#cbd5e1;">✓ <code>Navaneeth_Compact_40M_v2_Technical_Drawings_DE.pdf</code> (6 Blätter)</div>
+          <div style="color:#cbd5e1;">✓ <code>Navaneeth_Compact_40M_Calculations_BOM_DE.xlsx</code> (12 Blätter)</div>
+          <div style="color:#cbd5e1;">✓ <code>Navaneeth_Compact_40M_Engineering_Report_DE.pdf</code> (12 Seiten)</div>
+        </div>
+        <div id="exportStatusMsg" style="color:#34d399;font-weight:600;min-height:20px;"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    const SSOT = {"parts": [{"id": "P-01", "name": "Hinterer Flansch mit angeschweißter Nabe", "group": "Rotierende Baugruppe", "qty": 1, "mat": "EN AW-6061-T6", "proc": "Laserschneiden + Drehen + WIG-Schweißen", "dims": "Scheibe Ø220×3 + Nabe Ø44/Ø17,02 H7×18 mm", "fits": "Nabe Ø17,02 H7, Querbohrung Ø6,0 H11 (X=-9), 6× Ø5,5 (TK R=38), 3× Schlitz 16×58 mm (REV-01)", "xyz": "X=[-18..3], Y=0, Z=150", "mates": "P-02, P-07", "fasteners": "F-11..F-16, F-21", "mass_unit": 0.328, "mass_tot": 0.328, "drw": "DRW-P01-v2", "color": "#cdd0d4", "explode": [-35, 0, 0], "rotates": true, "step_assy": 4, "step_rem": 0}, {"id": "P-02", "name": "Konische Trommel mit 3 Umreifungskanälen", "group": "Rotierende Baugruppe", "qty": 1, "mat": "EN AW-6061-T6", "proc": "Drückwalzen / CNC-Drehen + Fräsen", "dims": "R_hinten=52,00 → R_vorne=48,15 mm, L=110, Wand 2,0 mm", "fits": "Konus 2,0045°, 6× Ø5,5 (TK R=38), 3× Kanal B=16×T=6 mm bei 0°/120°/240° (REV-01)", "xyz": "X=[3..113], Y=0, Z=150", "mates": "P-01, P-03, P-04, REF-01", "fasteners": "F-11..F-16", "mass_unit": 0.258, "mass_tot": 0.258, "drw": "DRW-P02-v2", "color": "#3c9682", "explode": [25, 0, 0], "rotates": true, "step_assy": 4, "step_rem": 0}, {"id": "P-03", "name": "Klett-Umreifungsbänder mit Rückschnallöse", "group": "Rotierende Baugruppe", "qty": 3, "mat": "PP/PA Gewebeband", "proc": "Kaufteil konfektioniert", "dims": "15 × 380 × 1,5 mm (3 Stück bei 0°, 120°, 240°)", "fits": "Geführt in 3× 16-mm-Schlitzen und 6-mm-Trommelkanälen (REV-01)", "xyz": "X=[5..111], R=[47..98]", "mates": "P-02, REF-01", "fasteners": "-", "mass_unit": 0.0078, "mass_tot": 0.023, "drw": "DRW-P03-v2", "color": "#cd3c2d", "explode": [95, 0, 0], "rotates": true, "step_assy": 5, "step_rem": 1}, {"id": "P-04", "name": "Vorderer abnehmbarer Schutzflansch", "group": "Rotierende Baugruppe", "qty": 1, "mat": "EN AW-6061-T6", "proc": "Laserschneiden + CNC-Zentrierbund", "dims": "Ø220×3 + Zentrierbund Ø30×1 mm", "fits": "Zentrierbohrung Ø17,20 H8 auf Spindel Ø17,00 k5, 6× Ø18, 3× Schlitz 16×58 mm (REV-01)", "xyz": "X=[113..117], Y=0, Z=150", "mates": "P-02, P-05, P-07", "fasteners": "-", "mass_unit": 0.27, "mass_tot": 0.27, "drw": "DRW-P04-v2", "color": "#cdd0d4", "explode": [165, 0, 0], "rotates": true, "step_assy": 5, "step_rem": 3}, {"id": "P-05", "name": "Axiale Haltescheibe Vorderflansch", "group": "Rotierende Baugruppe", "qty": 1, "mat": "C45E verzinkt", "proc": "Stanzen / Drehen DIN 988", "dims": "Ø34,0 / Ø17,20 × 2,0 mm", "fits": "Spielpassung +0,20 mm auf Spindel Ø17,00 k5", "xyz": "X=[117..119], Y=0, Z=150", "mates": "P-04, P-06, P-07", "fasteners": "-", "mass_unit": 0.011, "mass_tot": 0.011, "drw": "DRW-P05-v2", "color": "#aaafb4", "explode": [205, 0, 0], "rotates": true, "step_assy": 5, "step_rem": 2}, {"id": "P-06", "name": "Sicherungspin (Klappstecker DIN 11023)", "group": "Rotierende Baugruppe", "qty": 1, "mat": "C45E verzinkt", "proc": "Normkaufteil", "dims": "Schaft Ø6,0 × 30 mm, Zugring Ø17 mm", "fits": "Querbohrung Ø6,2 mm in Spindel bei X=122,0 mm (Abzug in +Z)", "xyz": "X=122, Y=0, Z=[135..175]", "mates": "P-05, P-07", "fasteners": "-", "mass_unit": 0.009, "mass_tot": 0.009, "drw": "DRW-P06-v2", "color": "#cd3c2d", "explode": [235, 0, 65], "rotates": true, "step_assy": 5, "step_rem": 1}, {"id": "P-07", "name": "Hauptspindel Ø17,00 k5 mit 3/8\"-Antriebszapfen", "group": "Spindel & Lagerung", "qty": 1, "mat": "C45E +QT (1.1191)", "proc": "CNC-Drehen + Fräsen + Rundschleifen", "dims": "Welle Ø17,00 k5 × 212 + Schulter Ø20×6 + 3/8\"-Sechskant SW9,5×36 mm", "fits": "Lagersitz Ø17,00 k5 (+2/+10 µm), Querloch Ø6,0 (X=-9), Pinloch Ø6,2 (X=122) (REV-03)", "xyz": "X=[-120..128], Y=0, Z=150", "mates": "P-01, P-04..06, P-08, P-10, REF-02", "fasteners": "F-21", "mass_unit": 0.395, "mass_tot": 0.395, "drw": "DRW-P07-v2", "color": "#7d8287", "explode": [-95, 0, 0], "rotates": true, "step_assy": 3, "step_rem": 0}, {"id": "P-08", "name": "Rillenkugellager 6003-2RS (SKF)", "group": "Spindel & Lagerung", "qty": 2, "mat": "100Cr6 Wälzlagerstahl", "proc": "Normkaufteil DIN 625-1", "dims": "d=17,00 × D=35,00 × B=10,00 mm (C=6,37 kN, C0=3,25 kN)", "fits": "Innenring auf Ø17,00 k5, Außenring in Gehäuse Ø35,00 H7 (REV-03)", "xyz": "X=[-84..-74] & [-34..-24], Z=150", "mates": "P-07, P-09, P-10", "fasteners": "-", "mass_unit": 0.039, "mass_tot": 0.078, "drw": "DRW-P08-v2", "color": "#aaafb4", "explode": [-65, 0, 35], "rotates": false, "step_assy": 3, "step_rem": 0}, {"id": "P-09", "name": "Abgesetztes Lagergehäuse mit Innenschulter", "group": "Spindel & Lagerung", "qty": 1, "mat": "EN AW-6061-T6", "proc": "CNC-Drehen + Bohren", "dims": "Rohr Ø45×56, Flansch Ø68×4 mm", "fits": "2× Lagersitz Ø35,00 H7 (10 tief), Innenschulter Ø31,0 (X=-74..-34), 4× Ø5,5 (TK R=28)", "xyz": "X=[-84..-24], Y=0, Z=150", "mates": "P-08, P-11", "fasteners": "F-01..F-04", "mass_unit": 0.145, "mass_tot": 0.145, "drw": "DRW-P09-v2", "color": "#3c9682", "explode": [-55, 0, 0], "rotates": false, "step_assy": 3, "step_rem": 0}, {"id": "P-10", "name": "Lager-Distanzhülse Innenring", "group": "Spindel & Lagerung", "qty": 1, "mat": "EN AW-6061-T6", "proc": "CNC-Drehen", "dims": "Ø22,0 / Ø17,10 × 40,0 mm", "fits": "Stützt Innenringe von P-08A und P-08B axial gegeneinander ab", "xyz": "X=[-74..-34], Y=0, Z=150", "mates": "P-07, P-08A, P-08B", "fasteners": "-", "mass_unit": 0.016, "mass_tot": 0.016, "drw": "DRW-P10-v2", "color": "#cdd0d4", "explode": [-65, 0, -35], "rotates": true, "step_assy": 3, "step_rem": 0}, {"id": "P-11", "name": "Haupt-Chassisplatte mit Erleichterungsfenstern", "group": "Rahmen & Stützen", "qty": 1, "mat": "EN AW-6061-T6", "proc": "Laserschneiden + Entgraten", "dims": "150 × 170 × 4,0 mm", "fits": "Zentralbohrung Ø36,0 mm, 4× Ø5,5 (TK28), 4× Ø5,5 (Beine), 2× Ø5,5 (Führungsarm)", "xyz": "X=[-24..-20], Y=[-75..75], Z=[65..235]", "mates": "P-09, P-12, P-17", "fasteners": "F-01..F-10", "mass_unit": 0.223, "mass_tot": 0.223, "drw": "DRW-P11-v2", "color": "#bebeb9", "explode": [0, 0, 0], "rotates": false, "step_assy": 2, "step_rem": 0}, {"id": "P-12", "name": "Verstärkter Führungsarm (8 mm)", "group": "Bandführung", "qty": 1, "mat": "EN AW-6061-T6", "proc": "CNC-Fräsen", "dims": "28 × 95 × 8,0 mm (REV-02)", "fits": "2× Ø5,5 (Z=212, 228), 1× Ø10,2 Aufnahmebohrung bei Z=285,0 mm", "xyz": "X=[-32..-24], Y=[-14..14], Z=[205..300]", "mates": "P-11, P-13", "fasteners": "F-09, F-10, F-22", "mass_unit": 0.055, "mass_tot": 0.055, "drw": "DRW-P12-v2", "color": "#3c9682", "explode": [-30, 0, 55], "rotates": false, "step_assy": 2, "step_rem": 0}, {"id": "P-13", "name": "Abgesetzte Kragarm-Führungsachse Ø16/Ø15,00 k5", "group": "Bandführung", "qty": 1, "mat": "C45E +QT", "proc": "CNC-Drehen + Tieflochbohren", "dims": "Zapfen M10×12 + Schulter Ø16×10 + Lagersitz Ø15,00 k5 × 142 mm (REV-02)", "fits": "Lagersitz Ø15,00 k5 passend für 2× SKF 6002-2RS (d=15 mm!), Hohlbohrung Ø8×120", "xyz": "X=[-36..128], Y=0, Z=285", "mates": "P-12, P-14", "fasteners": "F-22", "mass_unit": 0.173, "mass_tot": 0.173, "drw": "DRW-P13-v2", "color": "#7d8287", "explode": [40, 0, 75], "rotates": false, "step_assy": 5, "step_rem": 0}, {"id": "P-14", "name": "Rillenkugellager 6002-2RS (SKF)", "group": "Bandführung", "qty": 2, "mat": "100Cr6 Wälzlagerstahl", "proc": "Normkaufteil DIN 625-1", "dims": "d=15,00 × D=32,00 × B=9,00 mm (C=5,85 kN, C0=2,85 kN) (REV-02)", "fits": "Innenring auf Ø15,00 k5, Außenring in Führungsrolle Ø32,00 H7", "xyz": "X=[-14..-5] & [109..118], Z=285", "mates": "P-13, P-15", "fasteners": "-", "mass_unit": 0.03, "mass_tot": 0.06, "drw": "DRW-P14-v2", "color": "#aaafb4", "explode": [75, 0, 95], "rotates": false, "step_assy": 5, "step_rem": 0}, {"id": "P-15", "name": "Band-Führungsrolle Ø38 mm", "group": "Bandführung", "qty": 1, "mat": "POM-C", "proc": "CNC-Drehen", "dims": "Ø38,0 / Ø26,0 × 132,0 mm (REV-02)", "fits": "Beidseitiger Lagersitz Ø32,00 H7 × 9,0 mm tief für 6002-2RS", "xyz": "X=[-14..118], Y=0, Z=285", "mates": "P-14, P-16", "fasteners": "-", "mass_unit": 0.105, "mass_tot": 0.105, "drw": "DRW-P15-v2", "color": "#2864c8", "explode": [110, 0, 115], "rotates": false, "step_assy": 5, "step_rem": 0}, {"id": "P-16", "name": "4-Spur-Bandführungsschlitten / Spurkragen", "group": "Bandführung", "qty": 1, "mat": "POM-C", "proc": "CNC-Drehen / Fräsen", "dims": "5× Führungsbund Ø47/Ø38 × 2,0 mm (REV-06)", "fits": "Definiert 4× 25-mm-Bandspuren bei X = 19, 45, 71, 97 mm", "xyz": "X=[4,5..110,5], Y=0, Z=285", "mates": "P-15, REF-01", "fasteners": "-", "mass_unit": 0.022, "mass_tot": 0.022, "drw": "DRW-P16-v2", "color": "#cd3c2d", "explode": [110, 0, 150], "rotates": false, "step_assy": 5, "step_rem": 0}, {"id": "P-17", "name": "Beinleisten Links & Rechts", "group": "Rahmen & Stützen", "qty": 2, "mat": "EN AW-6061-T6", "proc": "Laserschneiden + WIG-Schweißen an P-18", "dims": "20 × 82 × 4,0 mm", "fits": "Je 2× Ø5,5 bei Z=75 und Z=100 mm (Y=±55 mm)", "xyz": "X=[-28..-24], Y=±[45..65], Z=[28..110]", "mates": "P-11, P-18", "fasteners": "F-05..F-08", "mass_unit": 0.017, "mass_tot": 0.034, "drw": "DRW-P17-v2", "color": "#bebeb9", "explode": [0, 0, -35], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-18", "name": "Querträger Hohlprofil 20×20×2,5", "group": "Rahmen & Stützen", "qty": 1, "mat": "EN AW-6061-T6", "proc": "Sägen + Bohren + Flachsenken", "dims": "20 × 20 × 2,5 × 240 mm", "fits": "2× Ø6,5 (Y=±95), 2× Ø6,5 (Y=±30), Kopfsenkung unten Z=8..12 mm (REV-05)", "xyz": "X=[-34..-14], Y=[-120..120], Z=[8..28]", "mates": "P-17, P-19, P-20, P-23B", "fasteners": "F-17..F-20, F-31..F-32", "mass_unit": 0.113, "mass_tot": 0.113, "drw": "DRW-P18-v2", "color": "#bebeb9", "explode": [0, 0, -65], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-19", "name": "Bodenschienen Hohlprofil Links & Rechts", "group": "Rahmen & Stützen", "qty": 2, "mat": "EN AW-6061-T6", "proc": "Sägen + Bohren", "dims": "20 × 20 × 2,5 × 240 mm", "fits": "Je 1× Ø6,5 (X=-24), 1× Ø5,5 (X=196), 2× Ø5,5 für Zugentlastung P-22", "xyz": "X=[-34..206], Y=±[85..105], Z=[28..48]", "mates": "P-18, P-22, P-23A", "fasteners": "F-17, F-18, F-27..F-30", "mass_unit": 0.113, "mass_tot": 0.227, "drw": "DRW-P19-v2", "color": "#bebeb9", "explode": [35, 0, -65], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-20", "name": "Fußplatte mit 4 Antirutsch-Rippen", "group": "Rahmen & Stützen", "qty": 1, "mat": "EN AW-6061-T6", "proc": "CNC-Fräsen / Strangpressprofil", "dims": "140 × 100 × 3,0 + 4 Rippen 4×3 mm (REV-05)", "fits": "Angehoben auf Z=12..18 mm; 2× Ø6,5 (X=-24, Y=±30), 4× Ø5,5 (Stütze P-21)", "xyz": "X=[-154..-14], Y=[-50..50], Z=[12..18]", "mates": "P-18, P-21, P-23B", "fasteners": "F-19, F-20, F-23..F-26, F-33..F-34", "mass_unit": 0.126, "mass_tot": 0.126, "drw": "DRW-P20-v2", "color": "#cdd0d4", "explode": [-45, 0, -85], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-21", "name": "Bohrschrauber-Drehmomentstütze", "group": "Rahmen & Stützen", "qty": 1, "mat": "EN AW-6061-T6 + NBR", "proc": "Abkanten + Fräsen + Elastomerpolster", "dims": "60 × 60 × 93 mm, Griffgabel 45×36 mm (REV-04)", "fits": "Stützt 20 Nm Reaktionsmoment (235,3 N am Griff) formschlüssig ab", "xyz": "X=[-235..-175], Y=[-30..30], Z=[15..108]", "mates": "P-20, REF-02", "fasteners": "F-23..F-26", "mass_unit": 0.145, "mass_tot": 0.145, "drw": "DRW-P21-v2", "color": "#3c9682", "explode": [-95, 0, -45], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-22", "name": "Ventilseitige Zugentlastungs- und Parkklemme", "group": "Rahmen & Stützen", "qty": 1, "mat": "EN AW-6061-T6 + POM", "proc": "CNC-Fräsen", "dims": "32 × 30 × 36 mm, Bandkanal 26×4 mm", "fits": "Isoliert 100 % der Wickel-/Fanglasten vom stationären Ventilanschluss", "xyz": "X=[42..74], Y=[-135..-105], Z=[28..64]", "mates": "P-19R, REF-03", "fasteners": "F-27, F-28", "mass_unit": 0.044, "mass_tot": 0.044, "drw": "DRW-P22-v2", "color": "#2864c8", "explode": [35, -60, -30], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "P-23", "name": "Elastomerdämpfer-Standfüße & Pads (6×)", "group": "Rahmen & Stützen", "qty": 6, "mat": "NBR 70 Shore A", "proc": "Formteil vulkanisiert", "dims": "2× Ø24×28 (vorne X=196) + 4× Ø24×12 mm (hinten X=-24/-140)", "fits": "Senksitz für M5-Schrauben F-29..F-34 (Sichert 12 mm Bodenfreiheit REV-05)", "xyz": "X=196/-24/-140, Z=[0..28]/[0..12]", "mates": "P-18, P-19, P-20", "fasteners": "F-29..F-34", "mass_unit": 0.0092, "mass_tot": 0.055, "drw": "DRW-P23-v2", "color": "#1e1e20", "explode": [0, 0, -110], "rotates": false, "step_assy": 1, "step_rem": 0}, {"id": "FAST", "name": "Kompletter Normschraubensatz (F-01..F-34)", "group": "Normbefestiger", "qty": 34, "mat": "Stahl FK 8.8 / A2-70", "proc": "ISO-Normteile", "dims": "24× M5, 5× M6, 1× M10×1,5 inkl. Scheiben & Sicherungsmuttern", "fits": "Alle Bohrungen fluchtend; min. Bodenfreiheit Z ≥ 12,0 mm", "xyz": "Gemäß Fastener-Register", "mates": "Alle Baugruppen", "fasteners": "F-01..F-34", "mass_unit": 0.0053, "mass_tot": 0.181, "drw": "BOM-FAST-v2", "color": "#aaafb4", "explode": [-20, 0, 20], "rotates": false, "step_assy": 2, "step_rem": 0}, {"id": "REF-01", "name": "40 m ALLWIN GOLD Tropfband-Rolle (4-Spur)", "group": "Referenzbaugruppen", "qty": 1, "mat": "LLDPE/HDPE (Allwin Pipes)", "proc": "Extrudiert mit Inline-Tropfern", "dims": "L=40.000 mm, B=25,0 mm, t_eff=1,5 mm, D_coil=193,2 mm (R=96,6 mm)", "fits": "1 durchgehendes Band über 4 Spuren à 10 m (X=6,5..109,5 mm)", "xyz": "X=[6,5..109,5], R=[48,2..96,6], Z=150", "mates": "P-02, P-03, P-16", "fasteners": "-", "mass_unit": 1.44, "mass_tot": 1.44, "drw": "REF-TAPE-40M", "color": "#37373a", "explode": [105, 0, 0], "rotates": true, "step_assy": 5, "step_rem": 4}, {"id": "REF-02", "name": "INGCO CIDLI12206 12-V-Akku-Schlagbohrschrauber", "group": "Referenzbaugruppen", "qty": 1, "mat": "PA6-GF30 / Stahl / Li-Ion", "proc": "Kaufteil (INGCO)", "dims": "12 V, 0–400 / 0–1500 rpm, max. 20 Nm, 0,8–10 mm Spannfutter", "fits": "Spannfutter auf 3/8\"-Zapfen P-07; Griff in Stütze P-21 (REV-04)", "xyz": "X=[-260..-120], Y=[-30..30], Z=[28..190]", "mates": "P-07, P-21", "fasteners": "-", "mass_unit": 0.98, "mass_tot": 0.98, "drw": "REF-DRILL-12V", "color": "#cd3c2d", "explode": [-145, 0, 0], "rotates": false, "step_assy": 5, "step_rem": 0}, {"id": "REF-03", "name": "Stationärer Ventilanschluss & entlasteter Bandpfad", "group": "Referenzbaugruppen", "qty": 1, "mat": "PVC-U / POM / LLDPE", "proc": "Feldinstallation", "dims": "Versorgungsrohr Ø28 (Y=-340..-262), Ventilstiel Z=28..32 (REV-07)", "fits": "Band läuft über Rolle P-15 durch Zugentlastungsklemme P-22 (0 N Ventillast)", "xyz": "X=[45..70], Y=[-340..0], Z=[12..304]", "mates": "P-15, P-22", "fasteners": "-", "mass_unit": 0.21, "mass_tot": 0.21, "drw": "REF-VALVE-01", "color": "#2864c8", "explode": [0, -85, 0], "rotates": false, "step_assy": 5, "step_rem": 0}], "fasteners": [{"id": "F-01..F-04", "norm": "4× ISO 4017 M5×16 FK 8.8", "wash_nut": "8× ISO 7089 A5,3 + 4× ISO 10511 M5", "xyz": "X=-28..-16, TK R=28 mm (45°, 135°, 225°, 315°) um (Y=0, Z=150)", "dir": "+X (Kopf X=-28, Mutter X=-20)", "parts": "P-09 (Lagergehäuse) ↔ P-11 (Chassisplatte)", "access": "SW8 Steckschlüssel beidseitig frei", "torque": "5,5 Nm", "pos3d": [-24, 19.8, 169.8]}, {"id": "F-05..F-08", "norm": "4× ISO 4017 M5×16 FK 8.8", "wash_nut": "8× ISO 7089 A5,3 + 4× ISO 10511 M5", "xyz": "X=-28..-16, Y=±55,0 mm, Z=75,0 & 100,0 mm", "dir": "+X (Kopf X=-28, Mutter X=-20)", "parts": "P-17L/R (Beinleisten) ↔ P-11 (Chassisplatte)", "access": "SW8 Ring-/Gabelschlüssel frei", "torque": "5,5 Nm", "pos3d": [-24, 55.0, 87.5]}, {"id": "F-09..F-10", "norm": "2× ISO 4017 M5×20 FK 8.8", "wash_nut": "4× ISO 7089 A5,3 + 2× ISO 10511 M5", "xyz": "X=-32..-16, Y=0,0 mm, Z=212,0 & 228,0 mm (REV-02)", "dir": "+X (Kopf X=-32, Mutter X=-20)", "parts": "P-12 (Führungsarm 8 mm) ↔ P-11 (Chassisplatte)", "access": "SW8 vor Hinterflanschmontage frei", "torque": "5,5 Nm", "pos3d": [-26, 0.0, 220.0]}, {"id": "F-11..F-16", "norm": "6× ISO 4017 M5×12 FK 8.8", "wash_nut": "12× ISO 7089 A5,3 + 6× ISO 10511 M5", "xyz": "X=0..10, TK R=38 mm (30°, 90°, 150°, 210°, 270°, 330°)", "dir": "+X (Kopf X=0, Mutter X=6)", "parts": "P-01 (Hinterflansch) ↔ P-02 (Konische Trommel)", "access": "SW8 durch offenes Trommelende +X", "torque": "5,5 Nm", "pos3d": [5, 0.0, 188.0]}, {"id": "F-17..F-18", "norm": "2× ISO 4762 M6×45 FK 8.8", "wash_nut": "4× ISO 7089 A6,4 + 2× ISO 10511 M6", "xyz": "X=-24,0, Y=±95,0, Z=12..53 mm (REV-05)", "dir": "+Z (Kopf versenkt Z=8..12, Mutter oben Z=48)", "parts": "P-18 (Querträger) ↔ P-19L/R (Bodenschienen)", "access": "ISK5 unten + SW10 oben (12 mm Bodenfreiheit!)", "torque": "9,5 Nm", "pos3d": [-24, 95.0, 30.0]}, {"id": "F-19..F-20", "norm": "2× ISO 7380 M6×25 FK 8.8", "wash_nut": "4× ISO 7089 A6,4 + 2× ISO 10511 M6", "xyz": "X=-24,0, Y=±30,0, Z=12..33 mm (REV-05)", "dir": "+Z (Kopf bei Z=12, Mutter oben Z=28)", "parts": "P-18 (Querträger) ↔ P-20 (Fußplatte)", "access": "ISK4 unten + SW10 oben (12 mm Bodenfreiheit!)", "torque": "9,5 Nm", "pos3d": [-24, 30.0, 20.0]}, {"id": "F-21", "norm": "1× ISO 4762 M6×50 FK 8.8 (Mitnehmer)", "wash_nut": "2× ISO 7089 A6,4 + 1× ISO 10511 M6", "xyz": "X=-9,0, Y=-25..+25, Z=150,0 mm (REV-03)", "dir": "+Y (Quer durch Nabe Ø44 & Spindel Ø17)", "parts": "P-01 (Hinterflansch-Nabe) ↔ P-07 (Hauptspindel)", "access": "ISK5 + SW10 radial zwischen X=-18..0 frei", "torque": "10,0 Nm", "pos3d": [-9, 0.0, 150.0]}, {"id": "F-22", "norm": "1× ISO 10511 M10×1,5 FK 8", "wash_nut": "1× ISO 7089 A10,5 Scheibe", "xyz": "X=-36..-32, Y=0,0, Z=285,0 mm (REV-02)", "dir": "-X (Auf Gewindezapfen M10 von P-13)", "parts": "P-13 (Führungsachse) ↔ P-12 (Führungsarm)", "access": "SW17 Ringschlüssel auf Rückseite X=-36", "torque": "35,0 Nm", "pos3d": [-34, 0.0, 285.0]}, {"id": "F-23..F-26", "norm": "4× ISO 7380 M5×16 FK 8.8", "wash_nut": "8× ISO 7089 A5,3 + 4× ISO 10511 M5", "xyz": "X=-225..-185, Y=±24, Z=12..24 mm (REV-04)", "dir": "+Z (Von Fußplatte Z=12 nach oben)", "parts": "P-21 (Drehmomentstütze) ↔ P-20 (Fußplatte)", "access": "ISK3 + SW8 frei zugänglich", "torque": "5,5 Nm", "pos3d": [-205, 24.0, 18.0]}, {"id": "F-27..F-28", "norm": "2× ISO 4762 M5×16 FK 8.8", "wash_nut": "4× ISO 7089 A5,3 + 2× ISO 10511 M5", "xyz": "X=48 & 68, Y=-105, Z=38,0 mm", "dir": "-Y (An rechter Bodenschiene P-19R)", "parts": "P-22 (Ventil-Zugentlastung) ↔ P-19R (Schiene R)", "access": "ISK4 seitlich frei zugänglich", "torque": "5,5 Nm", "pos3d": [58, -105.0, 38.0]}, {"id": "F-29..F-34", "norm": "6× ISO 4762 M5×16 A2-70", "wash_nut": "6× ISO 7089 A5,3 + 6× Einpressmutter M5", "xyz": "X=196 (Y=±95), X=-24 (Y=±110), X=-140 (Y=±40)", "dir": "+Z (Im Gummifuß tief versenkt Z≥8)", "parts": "P-23A/B (Elastomerfüße) ↔ P-18 / P-19 / P-20", "access": "ISK4 von unten durch Senkung im Gummifuß", "torque": "4,0 Nm", "pos3d": [196, 95.0, 14.0]}], "joints": [{"id": "JNT-01", "a": "P-07", "b": "P-08", "type": "Zylindrische Wälzlagerpassung", "fit": "Welle Ø17,00 k5 (+2/+10 µm) in Lager 6003-2RS (d=17,00 mm)", "fast": "P-10 (Distanzhülse)", "check": "Bügelmessschraube Ø17,002..17,010 mm"}, {"id": "JNT-02", "a": "P-08", "b": "P-09", "type": "Abgesetzter Gehäuse-Lagersitz", "fit": "Gehäuse Ø35,00 H7 (+0/+25 µm) mit Innenschulter Ø31,0 mm", "fast": "Schulter X=-74/-34", "check": "Grenzlehrdorn Ø35 H7 + Einpresstiefe 10,0 mm"}, {"id": "JNT-03", "a": "P-09", "b": "P-11", "type": "Stirnflansch-Verschraubung", "fit": "Ebene X=-24,0 mm, 4× Ø5,5 auf TK R=28 mm, Durchbruch Ø36 mm", "fast": "F-01..F-04", "check": "Drehmoment 5,5 Nm + Rundlaufprüfung"}, {"id": "JNT-04", "a": "P-01", "b": "P-07", "type": "Formschnittige Stift-Naben-Verbindung (REV-03)", "fit": "Nabe Ø17,02 H7 auf Ø17,00 k5 + Querbolzen Ø6,0 mm bei X=-9,0 mm", "fast": "F-21 (M6×50 FK 8.8)", "check": "20-Nm-Blockiermomenttest spielfrei"}, {"id": "JNT-05", "a": "P-01", "b": "P-02", "type": "Axiale Flanschverschraubung", "fit": "Ebene X=3,0 mm, 6× Ø5,5 auf TK R=38 mm; Kanäle fluchtend mit Schlitzen", "fast": "F-11..F-16", "check": "Planlauf < 0,15 mm; Gurtkanal-Fluchtung"}, {"id": "JNT-06", "a": "P-04", "b": "P-07", "type": "Schnellwechsel-Steckpassung (+X)", "fit": "Zentrierbohrung Ø17,20 H8 auf Spindel Ø17,00 k5 (Spiel +0,20 mm)", "fast": "P-05 + Pin P-06", "check": "Abzug von Hand in +X in < 5 s"}, {"id": "JNT-07", "a": "P-12", "b": "P-11", "type": "Zweischnittige Rahmenverschraubung (REV-02)", "fit": "Ebene X=-24,0 mm, 2× Ø5,5 bei Z=212 & 228 mm, Armdicke 8,0 mm", "fast": "F-09, F-10", "check": "Parallelität Führungsachse zu Spindel < 0,2°"}, {"id": "JNT-08", "a": "P-13", "b": "P-14", "type": "Schulterbolzen & Rollenlagerung (REV-02)", "fit": "Wurzel Ø16,0 mm am Arm; Lagersitz Ø15,00 k5 für 2× SKF 6002-2RS (d=15!)", "fast": "F-22 (M10×1,5)", "check": "Anzugsmoment 35 Nm + Leichtlauf Rolle P-15"}, {"id": "JNT-09", "a": "P-18", "b": "P-19", "type": "Bodenfreie Rahmenverschraubung (+Z, REV-05)", "fit": "Schraubenköpfe bei Z=8..12 mm versenkt, Muttern oben bei Z=28/48 mm", "fast": "F-17..F-20", "check": "Bodenfreiheit ≥ 12,0 mm unter allen Befestigern"}, {"id": "JNT-10", "a": "P-21", "b": "REF-02", "type": "Formschlüssige Reaktionsmomentstütze (REV-04)", "fit": "Griffgabel 45×36 mm mit 3-mm-NBR-Einlage auf Fußplatte P-20", "fast": "F-23..F-26", "check": "Stützt 20 Nm (235,3 N am Griff) ab; Akku frei"}, {"id": "JNT-11", "a": "P-22", "b": "REF-03", "type": "Klemmende Band-Zugentlastung", "fit": "Bandkanal 26×4 mm mit Schnellspanner an rechter Bodenschiene P-19R", "fast": "F-27, F-28", "check": "120 N Bandzug → 0 N Kraft am Ventilanschluss"}]};
+
+    // ---------------------------------------------------------------------------
+    // STATE & COAXIAL KINEMATIC PARAMETERS
+    // ---------------------------------------------------------------------------
+    const Z_SPINDLE = 150.0; // Exact spindle centerline: Y = 0.0, Z = 150.0 mm
+    const Z_GUIDE   = 285.0; // Exact cantilever guide roller centerline: Y = 0.0, Z = 285.0 mm
+    const LANE_X_CENTERS = [19.0, 45.0, 71.0, 97.0];
+    const LANE_X_STARTS  = [6.5, 32.5, 58.5, 84.5];
+    const LANE_CORE_R    = [51.45, 50.54, 49.63, 48.72];
+
+    let selectedPartId = "P-07";
+    let partnerPartId = null;
+    let isSpinning = false;
+    let isWinding = false;
+    let isRemovalAnim = false;
+    let isExplodeAnim = false;
+    let explodeAnimDir = 1;
+
+    let animSpeed = 1.0;
+    let windingPct = 100.0;
+    let explodePct = 0.0;
+    let removalProgress = 0.0; // Continuous 0.0 .. 4.0 for smooth +X removal sequence
+    let spinAngle = 0.0;
+    let rollerAngle = 0.0;
+    let tapeFlowOffset = 0.0;
+    let showAxes = true;
+
+    let partMeshes = {};
+    let partVisibility = {};
+    let treeRowMap = {};
+    let coilLaneObjs = [];
+    let rotatingFastenersGroup = null;
+    let activeCollarShoeMesh = null;
+    let dynamicTapeMesh = null;
+    let dynamicEmitterMeshes = [];
+    let axesHelperGroup = null;
+    let fastenerMarkerMesh = null;
+    let highlightedFastenerPos = null;
+    let needsRender = true;
+    let lastHudUpdateMs = 0;
+
+    // Camera state (used by both WebGL Three.js and Offline 3D Canvas Fallback!)
+    let camTarget = { x: 5.0, y: -15.0, z: 148.0 };
+    let camSpherical = { r: 610.0, theta: -0.82, phi: 1.10 };
+    let isDragging = false;
+    let isRightDrag = false;
+    let downMouse = { x: 0, y: 0 };
+    let prevMouse = { x: 0, y: 0 };
+    let maxDragDist = 0;
+
+    const canvas = document.getElementById("cadCanvas");
+    const wrapper = document.getElementById("canvas3dWrapper");
+    const HAS_THREE = (typeof THREE !== "undefined");
+    let renderer = null, scene = null, camera = null, clipPlane = null;
+    let ctx3dFallback = null;
+
+    if (HAS_THREE) {
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      renderer.localClippingEnabled = false;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x090f1d);
+
+      camera = new THREE.PerspectiveCamera(40, 1, 2, 4500);
+      camera.up.set(0, 0, 1);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.68));
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.88);
+      dirLight1.position.set(380, -480, 520);
+      scene.add(dirLight1);
+      const dirLight2 = new THREE.DirectionalLight(0x93c5fd, 0.45);
+      dirLight2.position.set(-420, 380, 240);
+      scene.add(dirLight2);
+
+      const gridHelper = new THREE.GridHelper(640, 32, 0x0d9488, 0x1e293b);
+      gridHelper.rotation.x = Math.PI / 2;
+      gridHelper.position.set(10, -30, 0);
+      scene.add(gridHelper);
+
+      clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+    } else {
+      ctx3dFallback = canvas.getContext("2d");
+    }
+
+    // ---------------------------------------------------------------------------
+    // FAST PROCEDURAL BUFFERGEOMETRY BUILDERS (WHEN THREE.JS IS LOADED)
+    // ---------------------------------------------------------------------------
+    function makeCyl(rTop, rBot, len, segs, axis, cx, cy, cz) {
+      const g = new THREE.CylinderGeometry(rTop, rBot, len, segs, 1, false);
+      if (axis === "X") g.rotateZ(-Math.PI / 2);
+      else if (axis === "Z") g.rotateX(Math.PI / 2);
+      if (cx || cy || cz) g.translate(cx, cy, cz);
+      return g;
+    }
+
+    function makeHollowTubeX(rOut0, rIn0, rOut1, rIn1, x0, x1, segs = 40, cy = 0, cz = 0, strappingChannels = false) {
+      const pos = [];
+      const indices = [];
+      for (let i = 0; i <= segs; i++) {
+        const u = (i / segs) * Math.PI * 2;
+        const cosU = Math.cos(u);
+        const sinU = Math.sin(u);
+        let ro0 = rOut0, ri0 = rIn0, ro1 = rOut1, ri1 = rIn1;
+        if (strappingChannels) {
+          for (let k = 0; k < 3; k++) {
+            const angC = k * (Math.PI * 2 / 3);
+            let da = Math.abs(((u - angC + Math.PI) % (Math.PI * 2)) - Math.PI);
+            if (da < 0.165) {
+              ro0 -= 4.2; ri0 -= 4.2;
+              ro1 -= 4.2; ri1 -= 4.2;
+            }
+          }
+        }
+        pos.push(x0, cy + ro0 * cosU, cz + ro0 * sinU);
+        pos.push(x0, cy + ri0 * cosU, cz + ri0 * sinU);
+        pos.push(x1, cy + ro1 * cosU, cz + ro1 * sinU);
+        pos.push(x1, cy + ri1 * cosU, cz + ri1 * sinU);
+      }
+      for (let i = 0; i < segs; i++) {
+        const b = i * 4;
+        const n = (i + 1) * 4;
+        indices.push(b, n, n + 2, b, n + 2, b + 2);
+        indices.push(b + 1, b + 3, n + 3, b + 1, n + 3, n + 1);
+        indices.push(b, b + 1, n + 1, b, n + 1, n);
+        indices.push(b + 2, n + 2, n + 3, b + 2, n + 3, b + 3);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    function buildSlottedFlangeGroup(x0, thickness, rBore, matMain, matAccent) {
+      const fg = new THREE.Group();
+      const x1 = x0 + thickness;
+      const xMid = x0 + thickness * 0.5;
+      fg.add(new THREE.Mesh(makeHollowTubeX(45.0, rBore, 45.0, rBore, x0, x1, 36, 0, 0), matMain));
+      fg.add(new THREE.Mesh(makeHollowTubeX(110.0, 103.0, 110.0, 103.0, x0, x1, 48, 0, 0), matMain));
+      [22, 60, 98, 142, 180, 218, 262, 300, 338].forEach((deg, idx) => {
+        const rad = deg * Math.PI / 180;
+        const spokeW = (idx % 3 === 1) ? 20 : 14;
+        const spoke = new THREE.BoxGeometry(thickness, 58.0, spokeW);
+        spoke.rotateX(rad - Math.PI / 2);
+        spoke.translate(xMid, Math.cos(rad) * 74.0, Math.sin(rad) * 74.0);
+        fg.add(new THREE.Mesh(spoke, matMain));
+      });
+      [0, 120, 240].forEach(deg => {
+        const rad = deg * Math.PI / 180;
+        for (let s of [-10.5, 10.5]) {
+          const rail = new THREE.BoxGeometry(thickness + 0.6, 58.0, 2.2);
+          rail.rotateX(rad - Math.PI / 2);
+          const yc = Math.cos(rad) * 74.0 - Math.sin(rad) * s;
+          const zc = Math.sin(rad) * 74.0 + Math.cos(rad) * s;
+          rail.translate(xMid, yc, zc);
+          fg.add(new THREE.Mesh(rail, matAccent));
+        }
+      });
+      return fg;
+    }
+
+    function createDynamicCoilLane(x0, x1, rCore, segs, matCoil, matStripe) {
+      const geo = makeHollowTubeX(96.58, rCore, 96.58, rCore, x0, x1, segs, 0, 0, false);
+      const mesh = new THREE.Mesh(geo, matCoil);
+      const laneGroup = new THREE.Group();
+      laneGroup.add(mesh);
+
+      const stripes = [];
+      for (let k = 0; k < 4; k++) {
+        const ang = k * (Math.PI / 2);
+        const sGeo = new THREE.BoxGeometry(x1 - x0 + 0.8, 3.2, 2.2);
+        const sMesh = new THREE.Mesh(sGeo, matStripe);
+        sMesh.rotation.x = ang;
+        laneGroup.add(sMesh);
+        stripes.push({ mesh: sMesh, ang: ang });
+      }
+
+      function updateOuterRadius(rOut) {
+        const pos = geo.attributes.position.array;
+        for (let i = 0; i <= segs; i++) {
+          const u = (i / segs) * Math.PI * 2;
+          const cosU = Math.cos(u);
+          const sinU = Math.sin(u);
+          const b = i * 12;
+          pos[b + 1] = rOut * cosU;
+          pos[b + 2] = rOut * sinU;
+          pos[b + 7] = rOut * cosU;
+          pos[b + 8] = rOut * sinU;
+        }
+        geo.attributes.position.needsUpdate = true;
+
+        const rMid = 0.5 * (rCore + rOut);
+        const spanR = Math.max(2.0, rOut - rCore);
+        const xMid = 0.5 * (x0 + x1);
+        stripes.forEach(st => {
+          st.mesh.scale.set(1, spanR / 3.2, 1);
+          st.mesh.position.set(xMid, Math.cos(st.ang) * rMid, Math.sin(st.ang) * rMid);
+        });
+      }
+
+      return { group: laneGroup, updateOuterRadius, rCore, currentROut: 96.58 };
+    }
+
+    function buildPartGroup(p) {
+      const group = new THREE.Group();
+      group.name = p.id;
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(p.color),
+        metalness: p.id.startsWith("P-") ? 0.45 : 0.18,
+        roughness: 0.38,
+        side: THREE.DoubleSide
+      });
+      const matDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5, roughness: 0.4 });
+      const matTeal = new THREE.MeshStandardMaterial({ color: 0x14b8a6, metalness: 0.4, roughness: 0.35 });
+      const matStripe = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.2, roughness: 0.3 });
+
+      const id = p.id;
+      if (id === "P-01") {
+        group.add(buildSlottedFlangeGroup(0.0, 3.0, 8.5, mat, matTeal));
+        group.add(new THREE.Mesh(makeHollowTubeX(22.0, 8.5, 22.0, 8.5, -18.0, 0.0, 36, 0, 0), mat));
+      } else if (id === "P-02") {
+        group.add(new THREE.Mesh(makeHollowTubeX(52.0, 17.0, 52.0, 17.0, 3.0, 6.0, 40, 0, 0), mat));
+        group.add(new THREE.Mesh(makeHollowTubeX(52.0, 50.0, 48.15, 46.15, 3.0, 113.0, 60, 0, 0, true), mat));
+        [0, 120, 240].forEach(deg => {
+          const rad = deg * Math.PI / 180;
+          const ch = new THREE.BoxGeometry(108, 14, 2.0);
+          ch.rotateX(rad - Math.PI / 2);
+          ch.translate(58, Math.cos(rad) * 46.2, Math.sin(rad) * 46.2);
+          group.add(new THREE.Mesh(ch, matDark));
+        });
+      } else if (id === "P-03") {
+        [0, 120, 240].forEach(deg => {
+          const rad = deg * Math.PI / 180;
+          const ca = Math.cos(rad), sa = Math.sin(rad);
+          const bOut = new THREE.BoxGeometry(108, 15, 2.2);
+          bOut.rotateX(rad - Math.PI / 2);
+          bOut.translate(58, ca * 97.8, sa * 97.8);
+          const bIn = new THREE.BoxGeometry(108, 15, 2.0);
+          bIn.rotateX(rad - Math.PI / 2);
+          bIn.translate(58, ca * 47.0, sa * 47.0);
+          const bFront = new THREE.BoxGeometry(2.2, 15, 52.0);
+          bFront.rotateX(rad - Math.PI / 2);
+          bFront.translate(111.5, ca * 72.4, sa * 72.4);
+          const bBack = new THREE.BoxGeometry(2.2, 15, 52.0);
+          bBack.rotateX(rad - Math.PI / 2);
+          bBack.translate(4.5, ca * 72.4, sa * 72.4);
+          group.add(new THREE.Mesh(bOut, mat), new THREE.Mesh(bIn, mat), new THREE.Mesh(bFront, mat), new THREE.Mesh(bBack, mat));
+        });
+      } else if (id === "P-04") {
+        group.add(buildSlottedFlangeGroup(113.0, 3.0, 8.6, mat, matTeal));
+        group.add(new THREE.Mesh(makeHollowTubeX(15.0, 8.6, 15.0, 8.6, 116.0, 117.0, 32, 0, 0), mat));
+      } else if (id === "P-05") {
+        group.add(new THREE.Mesh(makeHollowTubeX(17.0, 8.6, 17.0, 8.6, 117.0, 119.0, 28, 0, 0), mat));
+      } else if (id === "P-06") {
+        group.add(new THREE.Mesh(makeCyl(3.0, 3.0, 30.0, 16, "Z", 122.0, 0, 0), mat));
+        const ring = new THREE.TorusGeometry(7.5, 1.6, 12, 24);
+        ring.rotateY(Math.PI / 2);
+        ring.translate(122.0, 0, 22.0);
+        group.add(new THREE.Mesh(ring, mat));
+      } else if (id === "P-07") {
+        group.add(new THREE.Mesh(makeCyl(8.5, 8.5, 212.0, 28, "X", 22.0, 0, 0), mat));
+        group.add(new THREE.Mesh(makeCyl(10.0, 10.0, 6.0, 28, "X", -21.0, 0, 0), mat));
+        group.add(new THREE.Mesh(makeCyl(5.5, 5.5, 36.0, 6, "X", -102.0, 0, 0), mat));
+        const keyBar = new THREE.BoxGeometry(200.0, 2.2, 1.2);
+        keyBar.translate(22.0, 0, 8.4);
+        group.add(new THREE.Mesh(keyBar, matTeal));
+      } else if (id === "P-08") {
+        group.add(
+          new THREE.Mesh(makeHollowTubeX(17.5, 8.5, 17.5, 8.5, -84.0, -74.0, 32, 0, Z_SPINDLE), mat),
+          new THREE.Mesh(makeHollowTubeX(17.5, 8.5, 17.5, 8.5, -34.0, -24.0, 32, 0, Z_SPINDLE), mat)
+        );
+      } else if (id === "P-09") {
+        group.add(
+          new THREE.Mesh(makeHollowTubeX(22.5, 17.5, 22.5, 17.5, -84.0, -28.0, 36, 0, Z_SPINDLE), mat),
+          new THREE.Mesh(makeHollowTubeX(34.0, 17.5, 34.0, 17.5, -28.0, -24.0, 36, 0, Z_SPINDLE), mat)
+        );
+      } else if (id === "P-10") {
+        group.add(new THREE.Mesh(makeHollowTubeX(11.0, 8.55, 11.0, 8.55, -74.0, -34.0, 28, 0, 0), mat));
+      } else if (id === "P-11") {
+        const b = new THREE.BoxGeometry(4.0, 150.0, 170.0);
+        b.translate(-22.0, 0, 150.0);
+        group.add(new THREE.Mesh(b, mat));
+      } else if (id === "P-12") {
+        const b = new THREE.BoxGeometry(8.0, 28.0, 95.0);
+        b.translate(-28.0, 0, 252.5);
+        group.add(new THREE.Mesh(b, mat));
+      } else if (id === "P-13") {
+        group.add(
+          new THREE.Mesh(makeCyl(7.5, 7.5, 154.0, 24, "X", 51.0, 0, Z_GUIDE), mat),
+          new THREE.Mesh(makeCyl(8.0, 8.0, 10.0, 24, "X", -19.0, 0, Z_GUIDE), mat)
+        );
+      } else if (id === "P-14") {
+        group.add(
+          new THREE.Mesh(makeHollowTubeX(16.0, 7.5, 16.0, 7.5, -14.0, -5.0, 28, 0, Z_GUIDE), mat),
+          new THREE.Mesh(makeHollowTubeX(16.0, 7.5, 16.0, 7.5, 109.0, 118.0, 28, 0, Z_GUIDE), mat)
+        );
+      } else if (id === "P-15") {
+        group.add(new THREE.Mesh(makeHollowTubeX(19.0, 13.0, 19.0, 13.0, -14.0, 118.0, 36, 0, 0), mat));
+        for (let k = 0; k < 8; k++) {
+          const ang = k * (Math.PI / 4);
+          const rib = new THREE.BoxGeometry(128.0, 1.8, 1.2);
+          rib.rotateX(ang);
+          rib.translate(52.0, Math.cos(ang) * 19.1, Math.sin(ang) * 19.1);
+          group.add(new THREE.Mesh(rib, matStripe));
+        }
+      } else if (id === "P-16") {
+        [5.5, 31.5, 57.5, 83.5, 109.5].forEach(xc => {
+          group.add(new THREE.Mesh(makeHollowTubeX(24.0, 19.2, 24.0, 19.2, xc - 1.0, xc + 1.0, 32, 0, Z_GUIDE), mat));
+        });
+        const shoeGeo = makeHollowTubeX(25.5, 20.5, 25.5, 20.5, -12.5, 12.5, 28, 0, Z_GUIDE);
+        activeCollarShoeMesh = new THREE.Mesh(shoeGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.3, roughness: 0.3 }));
+        activeCollarShoeMesh.position.x = 97.0;
+        group.add(activeCollarShoeMesh);
+      } else if (id === "P-17") {
+        const bL = new THREE.BoxGeometry(4.0, 20.0, 82.0);
+        bL.translate(-26.0, 55.0, 69.0);
+        const bR = new THREE.BoxGeometry(4.0, 20.0, 82.0);
+        bR.translate(-26.0, -55.0, 69.0);
+        group.add(new THREE.Mesh(bL, mat), new THREE.Mesh(bR, mat));
+      } else if (id === "P-18") {
+        const b = new THREE.BoxGeometry(20.0, 240.0, 20.0);
+        b.translate(-24.0, 0, 18.0);
+        group.add(new THREE.Mesh(b, mat));
+      } else if (id === "P-19") {
+        const bL = new THREE.BoxGeometry(240.0, 20.0, 20.0);
+        bL.translate(86.0, 95.0, 38.0);
+        const bR = new THREE.BoxGeometry(240.0, 20.0, 20.0);
+        bR.translate(86.0, -95.0, 38.0);
+        group.add(new THREE.Mesh(bL, mat), new THREE.Mesh(bR, mat));
+      } else if (id === "P-20") {
+        const b = new THREE.BoxGeometry(140.0, 100.0, 4.0);
+        b.translate(-84.0, 0, 14.0);
+        group.add(new THREE.Mesh(b, mat));
+        [-146, -116, -86, -56].forEach(xr => {
+          const rb = new THREE.BoxGeometry(4.0, 100.0, 3.0);
+          rb.translate(xr, 0, 17.5);
+          group.add(new THREE.Mesh(rb, matDark));
+        });
+      } else if (id === "P-21") {
+        const base = new THREE.BoxGeometry(60.0, 60.0, 4.0);
+        base.translate(-205.0, 0, 17.0);
+        const wL = new THREE.BoxGeometry(45.0, 4.0, 88.0);
+        wL.translate(-205.0, 20.0, 63.0);
+        const wR = new THREE.BoxGeometry(45.0, 4.0, 88.0);
+        wR.translate(-205.0, -20.0, 63.0);
+        group.add(new THREE.Mesh(base, mat), new THREE.Mesh(wL, mat), new THREE.Mesh(wR, mat));
+      } else if (id === "P-22") {
+        const b = new THREE.BoxGeometry(32.0, 30.0, 36.0);
+        b.translate(58.0, -120.0, 46.0);
+        group.add(new THREE.Mesh(b, mat));
+      } else if (id === "P-23") {
+        [[196, 95, 28, 14], [196, -95, 28, 14], [-24, 110, 8, 4], [-24, -110, 8, 4], [-140, 40, 12, 6], [-140, -40, 12, 6]].forEach(fp => {
+          group.add(new THREE.Mesh(makeCyl(12.0, 12.0, fp[2], 20, "Z", fp[0], fp[1], fp[3]), mat));
+        });
+      } else if (id === "FAST") {
+        rotatingFastenersGroup = new THREE.Group();
+        rotatingFastenersGroup.position.set(0, 0, Z_SPINDLE);
+        group.add(rotatingFastenersGroup);
+        [30, 90, 150, 210, 270, 330].forEach(deg => {
+          const rad = deg * Math.PI / 180;
+          const yc = Math.cos(rad) * 38.0;
+          const zc = Math.sin(rad) * 38.0;
+          rotatingFastenersGroup.add(new THREE.Mesh(makeCyl(4.2, 4.2, 12.0, 6, "X", 3.0, yc, zc), mat));
+        });
+        rotatingFastenersGroup.add(new THREE.Mesh(makeCyl(3.5, 3.5, 50.0, 12, "Y", -9.0, 0, 0), mat));
+        SSOT.fasteners.forEach(f => {
+          if (f.id === "F-11..F-16" || f.id === "F-21") return;
+          group.add(new THREE.Mesh(makeCyl(4.5, 4.5, 10.0, 6, "X", f.pos3d[0], f.pos3d[1], f.pos3d[2]), mat));
+        });
+      } else if (id === "REF-01") {
+        coilLaneObjs = [];
+        for (let i = 0; i < 4; i++) {
+          const xs = LANE_X_STARTS[i];
+          const xe = xs + 25.0;
+          const laneObj = createDynamicCoilLane(xs, xe, LANE_CORE_R[i], 44, mat.clone(), matStripe);
+          group.add(laneObj.group);
+          coilLaneObjs.push(laneObj);
+        }
+      } else if (id === "REF-02") {
+        const g1 = new THREE.BoxGeometry(110.0, 52.0, 72.0); g1.translate(-205.0, 0, 154.0);
+        const g2 = new THREE.BoxGeometry(45.0, 36.0, 58.0);  g2.translate(-207.0, 0, 89.0);
+        const g3 = new THREE.BoxGeometry(85.0, 60.0, 32.0);  g3.translate(-212.0, 0, 44.0);
+        group.add(
+          new THREE.Mesh(makeCyl(18.0, 18.0, 30.0, 24, "X", -135.0, 0, Z_SPINDLE), matDark),
+          new THREE.Mesh(g1, mat),
+          new THREE.Mesh(g2, matDark),
+          new THREE.Mesh(g3, matDark)
+        );
+      } else if (id === "REF-03") {
+        const hdl = new THREE.BoxGeometry(10.0, 24.0, 5.0); hdl.translate(58.0, -300.0, 35.0);
+        group.add(
+          new THREE.Mesh(makeCyl(14.0, 14.0, 78.0, 24, "Y", 58.0, -301.0, 16.0), mat),
+          new THREE.Mesh(makeCyl(4.0, 4.0, 8.0, 16, "Z", 58.0, -300.0, 30.0), mat),
+          new THREE.Mesh(hdl, matTeal)
+        );
+        const lowTapeGeo = new THREE.BoxGeometry(25.0, 168.0, 2.2);
+        lowTapeGeo.rotateX(0.13);
+        lowTapeGeo.translate(58.0, -202.0, 35.0);
+        const tapeMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.45, metalness: 0.15 });
+        group.add(new THREE.Mesh(lowTapeGeo, tapeMat));
+
+        const dynGroup = new THREE.Group();
+        const segAGeo = new THREE.BoxGeometry(25.0, 285.0, 2.2);
+        segAGeo.rotateX(1.135);
+        segAGeo.translate(0, -60.0, 175.0);
+        dynGroup.add(new THREE.Mesh(segAGeo, tapeMat));
+
+        const segBGeo = new THREE.BoxGeometry(25.0, 2.4, 135.0);
+        const segBMesh = new THREE.Mesh(segBGeo, tapeMat);
+        segBMesh.position.set(0, 18.0, 217.5);
+        dynGroup.add(segBMesh);
+
+        dynamicEmitterMeshes = [];
+        const emGeo = new THREE.BoxGeometry(16.0, 4.0, 3.2);
+        const emMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        for (let k = 0; k < 6; k++) {
+          const em = new THREE.Mesh(emGeo, emMat);
+          dynGroup.add(em);
+          dynamicEmitterMeshes.push(em);
+        }
+
+        dynamicTapeMesh = { group: dynGroup, segBMesh: segBMesh };
+        group.add(dynGroup);
+      }
+
+      group.userData = { part: p, baseMat: mat };
+      return group;
+    }
+
+    if (HAS_THREE) {
+      const masterGroup = new THREE.Group();
+      scene.add(masterGroup);
+      SSOT.parts.forEach(p => {
+        const grp = buildPartGroup(p);
+        partMeshes[p.id] = grp;
+        partVisibility[p.id] = true;
+        masterGroup.add(grp);
+      });
+
+      axesHelperGroup = new THREE.Group();
+      const spAxisGeo = makeCyl(0.9, 0.9, 495.0, 12, "X", -27.5, 0, Z_SPINDLE);
+      const spAxisMat = new THREE.MeshBasicMaterial({ color: 0x2dd4bf });
+      axesHelperGroup.add(new THREE.Mesh(spAxisGeo, spAxisMat));
+      const gdAxisGeo = makeCyl(0.8, 0.8, 205.0, 12, "X", 47.5, 0, Z_GUIDE);
+      const gdAxisMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+      axesHelperGroup.add(new THREE.Mesh(gdAxisGeo, gdAxisMat));
+      const rotRingGeo = new THREE.TorusGeometry(32.0, 1.1, 10, 36, Math.PI * 1.65);
+      rotRingGeo.rotateY(Math.PI / 2);
+      const rotRingMesh = new THREE.Mesh(rotRingGeo, spAxisMat);
+      rotRingMesh.position.set(132.0, 0, Z_SPINDLE);
+      axesHelperGroup.add(rotRingMesh);
+      scene.add(axesHelperGroup);
+
+      const beaconGeo = new THREE.SphereGeometry(9.5, 16, 16);
+      const beaconMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, wireframe: true });
+      fastenerMarkerMesh = new THREE.Mesh(beaconGeo, beaconMat);
+      fastenerMarkerMesh.visible = false;
+      scene.add(fastenerMarkerMesh);
+    } else {
+      SSOT.parts.forEach(p => { partVisibility[p.id] = true; });
+    }
+
+    // ---------------------------------------------------------------------------
+    // BUILT-IN 60-FPS 3D SOFTWARE CAD RENDERER (AUTOMATIC OFFLINE / NO-WEBGL ENGINE)
+    // ---------------------------------------------------------------------------
+    function renderFallback3DCanvas() {
+      if (!ctx3dFallback) return;
+      const w = canvas.width, h = canvas.height;
+      ctx3dFallback.fillStyle = "#090f1d";
+      ctx3dFallback.fillRect(0, 0, w, h);
+
+      // Camera basis vectors (Z-up)
+      const sinPhi = Math.sin(camSpherical.phi), cosPhi = Math.cos(camSpherical.phi);
+      const sinTh = Math.sin(camSpherical.theta), cosTh = Math.cos(camSpherical.theta);
+      const camPos = {
+        x: camTarget.x + camSpherical.r * sinPhi * cosTh,
+        y: camTarget.y + camSpherical.r * sinPhi * sinTh,
+        z: camTarget.z + camSpherical.r * cosPhi
+      };
+      // Forward f = normalize(target - camPos)
+      let fx = camTarget.x - camPos.x, fy = camTarget.y - camPos.y, fz = camTarget.z - camPos.z;
+      const fl = Math.hypot(fx, fy, fz) || 1;
+      fx /= fl; fy /= fl; fz /= fl;
+      // Right r = normalize(f x up(0,0,1)) = (fy, -fx, 0)
+      let rx = fy, ry = -fx, rz = 0;
+      const rl = Math.hypot(rx, ry) || 1;
+      rx /= rl; ry /= rl;
+      // True Up u = r x f
+      const ux = ry * fz - rz * fy;
+      const uy = rz * fx - rx * fz;
+      const uz = rx * fy - ry * fx;
+
+      const fovScale = (h * 0.5) / Math.tan(20 * Math.PI / 180);
+      function proj(px, py, pz) {
+        const dx = px - camPos.x, dy = py - camPos.y, dz = pz - camPos.z;
+        const cz = dx * fx + dy * fy + dz * fz;
+        if (cz < 10) return null;
+        const cx = dx * rx + dy * ry + dz * rz;
+        const cy = dx * ux + dy * uy + dz * uz;
+        return { x: w * 0.5 + (cx / cz) * fovScale, y: h * 0.5 - (cy / cz) * fovScale, z: cz };
+      }
+
+      // Draw floor grid at Z=0
+      ctx3dFallback.strokeStyle = "#1e293b";
+      ctx3dFallback.lineWidth = 1;
+      for (let g = -280; g <= 280; g += 40) {
+        const p1 = proj(g, -280, 0), p2 = proj(g, 280, 0);
+        if (p1 && p2) { ctx3dFallback.beginPath(); ctx3dFallback.moveTo(p1.x, p1.y); ctx3dFallback.lineTo(p2.x, p2.y); ctx3dFallback.stroke(); }
+        const q1 = proj(-280, g, 0), q2 = proj(280, g, 0);
+        if (q1 && q2) { ctx3dFallback.beginPath(); ctx3dFallback.moveTo(q1.x, q1.y); ctx3dFallback.lineTo(q2.x, q2.y); ctx3dFallback.stroke(); }
+      }
+
+      const fExp = explodePct / 100.0;
+      const remPinZ    = Math.max(0, Math.min(1, removalProgress - 0.0)) * 78.0;
+      const remWasherX = Math.max(0, Math.min(1, removalProgress - 1.0)) * 68.0;
+      const remFlangeX = Math.max(0, Math.min(1, removalProgress - 2.0)) * 105.0;
+      const remCoilX   = Math.max(0, Math.min(1, removalProgress - 3.0)) * 165.0;
+
+      // Helper to draw a 3D cylinder / ring along X axis around (Y=cy, Z=cz) with rotation rotX
+      function drawCylX(x0, x1, rOut, rIn, cy, cz, rotX, colorHex, isSel, slots = false) {
+        const segs = 24;
+        const polys = [];
+        for (let i = 0; i < segs; i++) {
+          const a0 = rotX + (i / segs) * Math.PI * 2;
+          const a1 = rotX + ((i + 1) / segs) * Math.PI * 2;
+          const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+          const y0 = cy + c0 * rOut, z0 = cz + s0 * rOut;
+          const y1 = cy + c1 * rOut, z1 = cz + s1 * rOut;
+          const p00 = proj(x0, y0, z0), p01 = proj(x0, y1, z1), p11 = proj(x1, y1, z1), p10 = proj(x1, y0, z0);
+          const isSlot = (slots && (i % 8 === 0));
+          if (p00 && p01 && p11 && p10) {
+            const zAvg = 0.25 * (p00.z + p01.z + p11.z + p10.z);
+            polys.push({ pts: [p00, p01, p11, p10], z: zAvg, color: colorHex, shade: 1, isSel, stripe: isSlot });
+          }
+          if (!(slots && rOut > 95 && isSlot)) {
+            const rInner = (slots && rOut > 95) ? 44.0 : Math.max(0, rIn);
+            const yi0 = cy + c0 * rInner, zi0 = cz + s0 * rInner;
+            const yi1 = cy + c1 * rInner, zi1 = cz + s1 * rInner;
+            for (let xf of [x0, x1]) {
+              const fo0 = proj(xf, y0, z0), fo1 = proj(xf, y1, z1), fi1 = proj(xf, yi1, zi1), fi0 = proj(xf, yi0, zi0);
+              if (fo0 && fo1 && fi1 && fi0) {
+                const zAvg = 0.25 * (fo0.z + fo1.z + fi1.z + fi0.z);
+                polys.push({ pts: [fo0, fo1, fi1, fi0], z: zAvg, color: colorHex, shade: 1, isSel, stripe: isSlot });
+              }
+            }
+          }
+        }
+        return polys;
+      }
+      function drawRibbon3D(cx, wX, y0, z0, y1, z1, colorHex, isSel) {
+        const hw = wX * 0.5;
+        const p0 = proj(cx - hw, y0, z0), p1 = proj(cx + hw, y0, z0), p2 = proj(cx + hw, y1, z1), p3 = proj(cx - hw, y1, z1);
+        if (!p0 || !p1 || !p2 || !p3) return [];
+        return [{ pts: [p0, p1, p2, p3], z: 0.25 * (p0.z + p1.z + p2.z + p3.z), color: colorHex, shade: 1, isSel, stripe: false }];
+      }
+
+      function drawBox3D(x0, x1, y0, y1, z0, z1, colorHex, isSel) {
+        const v = [
+          proj(x0,y0,z0), proj(x1,y0,z0), proj(x1,y1,z0), proj(x0,y1,z0),
+          proj(x0,y0,z1), proj(x1,y0,z1), proj(x1,y1,z1), proj(x0,y1,z1)
+        ];
+        if (v.some(p => !p)) return [];
+        const faces = [
+          { idx: [4,5,6,7], s: 1.0 }, { idx: [0,3,2,1], s: 0.6 },
+          { idx: [0,1,5,4], s: 0.85 }, { idx: [1,2,6,5], s: 0.9 },
+          { idx: [2,3,7,6], s: 0.75 }, { idx: [3,0,4,7], s: 0.7 }
+        ];
+        return faces.map(f => {
+          const pts = f.idx.map(k => v[k]);
+          const zAvg = 0.25 * (pts[0].z + pts[1].z + pts[2].z + pts[3].z);
+          return { pts, z: zAvg, color: colorHex, shade: f.s, isSel, stripe: false };
+        });
+      }
+
+      let allPolys = [];
+      // Build polys for visible parts
+      SSOT.parts.forEach(p => {
+        if (!partVisibility[p.id]) return;
+        const isSel = (p.id === selectedPartId || p.id === partnerPartId);
+        let dx = p.explode[0] * fExp, dy = p.explode[1] * fExp, dz = p.explode[2] * fExp;
+        if (p.id === "P-06") dz += remPinZ;
+        if (p.id === "P-05") dx += remWasherX + remFlangeX + remCoilX * 0.4;
+        if (p.id === "P-04") dx += remFlangeX + remCoilX * 0.5;
+        if (p.id === "REF-01" || p.id === "P-03") dx += remCoilX;
+
+        const zSp = Z_SPINDLE + dz;
+        const zGd = Z_GUIDE + dz;
+
+        if (p.id === "P-01") {
+          allPolys.push(...drawCylX(dx, dx+3, 110, 8.5, dy, zSp, spinAngle, p.color, isSel, true));
+          allPolys.push(...drawCylX(dx-18, dx, 22, 8.5, dy, zSp, spinAngle, p.color, isSel, false));
+        } else if (p.id === "P-02") {
+          allPolys.push(...drawCylX(dx+3, dx+113, 50, 46, dy, zSp, spinAngle, p.color, isSel, true));
+        } else if (p.id === "P-03" && (windingPct >= 99.5 || !isWinding)) {
+          [0, 120, 240].forEach(deg => {
+            const a = spinAngle + deg * Math.PI / 180;
+            const cy = dy + Math.cos(a) * 97.5, cz = zSp + Math.sin(a) * 97.5;
+            allPolys.push(...drawBox3D(dx+5, dx+111, cy-7, cy+7, cz-2, cz+2, p.color, isSel));
+          });
+        } else if (p.id === "P-04") {
+          allPolys.push(...drawCylX(dx+113, dx+116, 110, 8.6, dy, zSp, spinAngle, p.color, isSel, true));
+        } else if (p.id === "P-05") {
+          allPolys.push(...drawCylX(dx+117, dx+119, 17, 8.6, dy, zSp, spinAngle, p.color, isSel, false));
+        } else if (p.id === "P-06") {
+          const a = spinAngle;
+          const py = dy - Math.sin(a)*12, pz = zSp + Math.cos(a)*12;
+          allPolys.push(...drawBox3D(dx+119, dx+125, py-4, py+4, pz-15, pz+22, p.color, isSel));
+        } else if (p.id === "P-07") {
+          allPolys.push(...drawCylX(dx-120, dx+128, 8.5, 0, dy, zSp, spinAngle, p.color, isSel, true));
+        } else if (p.id === "P-08") {
+          allPolys.push(...drawCylX(dx-84, dx-74, 17.5, 8.5, dy, zSp, 0, p.color, isSel));
+          allPolys.push(...drawCylX(dx-34, dx-24, 17.5, 8.5, dy, zSp, 0, p.color, isSel));
+        } else if (p.id === "P-09") {
+          allPolys.push(...drawCylX(dx-84, dx-24, 23, 17.5, dy, zSp, 0, p.color, isSel));
+        } else if (p.id === "P-11") {
+          allPolys.push(...drawBox3D(dx-24, dx-20, dy-75, dy+75, dz+65, dz+235, p.color, isSel));
+        } else if (p.id === "P-12") {
+          allPolys.push(...drawBox3D(dx-32, dx-24, dy-14, dy+14, dz+205, dz+300, p.color, isSel));
+        } else if (p.id === "P-13") {
+          allPolys.push(...drawCylX(dx-36, dx+128, 7.5, 0, dy, zGd, 0, p.color, isSel));
+        } else if (p.id === "P-15") {
+          allPolys.push(...drawCylX(dx-14, dx+118, 19, 13, dy, zGd, rollerAngle, p.color, isSel, true));
+        } else if (p.id === "P-16") {
+          [5.5, 31.5, 57.5, 83.5, 109.5].forEach(xc => {
+            allPolys.push(...drawCylX(dx+xc-1, dx+xc+1, 24, 19, dy, zGd, 0, p.color, isSel));
+          });
+        } else if (p.id === "P-17") {
+          allPolys.push(...drawBox3D(dx-28, dx-24, dy+45, dy+65, dz+28, dz+110, p.color, isSel));
+          allPolys.push(...drawBox3D(dx-28, dx-24, dy-65, dy-45, dz+28, dz+110, p.color, isSel));
+        } else if (p.id === "P-18") {
+          allPolys.push(...drawBox3D(dx-34, dx-14, dy-120, dy+120, dz+8, dz+28, p.color, isSel));
+        } else if (p.id === "P-19") {
+          allPolys.push(...drawBox3D(dx-34, dx+206, dy+85, dy+105, dz+28, dz+48, p.color, isSel));
+          allPolys.push(...drawBox3D(dx-34, dx+206, dy-105, dy-85, dz+28, dz+48, p.color, isSel));
+        } else if (p.id === "P-20") {
+          allPolys.push(...drawBox3D(dx-154, dx-14, dy-50, dy+50, dz+12, dz+16, p.color, isSel));
+        } else if (p.id === "P-21") {
+          allPolys.push(...drawBox3D(dx-235, dx-175, dy-24, dy+24, dz+15, dz+105, p.color, isSel));
+        } else if (p.id === "P-22") {
+          allPolys.push(...drawBox3D(dx+42, dx+74, dy-135, dy-105, dz+28, dz+64, p.color, isSel));
+        } else if (p.id === "REF-01") {
+          for (let i = 0; i < 4; i++) {
+            const f = Math.max(0, Math.min(1, (windingPct - i * 25.0) / 25.0));
+            if (f > 0.01) {
+              const rc = LANE_CORE_R[i];
+              const ro = Math.sqrt(rc * rc + f * (96.58 * 96.58 - 50.075 * 50.075));
+              const xs = dx + LANE_X_STARTS[i];
+              allPolys.push(...drawCylX(xs, xs + 24.5, ro, rc, dy, zSp, spinAngle, p.color, isSel, true));
+            }
+          }
+        } else if (p.id === "REF-02") {
+          allPolys.push(...drawCylX(dx-150, dx-120, 18, 0, dy, zSp, 0, "#334155", isSel));
+          allPolys.push(...drawBox3D(dx-260, dx-150, dy-26, dy+26, dz+118, dz+190, p.color, isSel));
+          allPolys.push(...drawBox3D(dx-230, dx-185, dy-18, dy+18, dz+60, dz+118, "#334155", isSel));
+          allPolys.push(...drawBox3D(dx-255, dx-170, dy-30, dy+30, dz+28, dz+60, "#1e293b", isSel));
+        } else if (p.id === "REF-03") {
+          const laneIdx = Math.min(4, Math.max(1, Math.floor((windingPct / 100.0) * 3.999) + 1));
+          const lx = LANE_X_CENTERS[laneIdx - 1];
+          const Lc = 40.0 * (windingPct / 100.0);
+          const Rc = Math.sqrt(50.075 * 50.075 + (Lc * 1000.0 * 1.5) / (Math.PI * 4.0 * 0.70));
+          allPolys.push(...drawBox3D(dx+44, dx+72, dy-340, dy-262, dz+4, dz+28, p.color, isSel));
+          allPolys.push(...drawRibbon3D(dx+58, 24, dy-285, dz+20, dy-120, dz+46, "#27272a", isSel));
+          if (removalProgress < 0.2) {
+            allPolys.push(...drawRibbon3D(dx+lx, 24, dy-120, dz+46, dy-14, dz+301, "#27272a", isSel));
+            allPolys.push(...drawRibbon3D(dx+lx, 24, dy+16, dz+292, dy+Rc*0.65, dz+150+Rc*0.75, "#27272a", isSel));
+            for (let k = 0; k < 5; k++) {
+              const u = (tapeFlowOffset + k / 5.0) % 1.0;
+              const ey = (dy - 120) * (1 - u) + (dy - 14) * u;
+              const ez = (dz + 46) * (1 - u) + (dz + 301) * u;
+              allPolys.push(...drawRibbon3D(dx+lx, 16, ey-3, ez-6, ey+3, ez+6, "#38bdf8", false));
+            }
+          }
+        }
+      });
+
+      allPolys.sort((a, b) => b.z - a.z);
+      allPolys.forEach(poly => {
+        ctx3dFallback.beginPath();
+        ctx3dFallback.moveTo(poly.pts[0].x, poly.pts[0].y);
+        for (let i = 1; i < poly.pts.length; i++) ctx3dFallback.lineTo(poly.pts[i].x, poly.pts[i].y);
+        ctx3dFallback.closePath();
+        if (poly.isSel) {
+          ctx3dFallback.fillStyle = "#14b8a6";
+        } else if (poly.stripe) {
+          ctx3dFallback.fillStyle = "#38bdf8";
+        } else {
+          ctx3dFallback.fillStyle = poly.color;
+        }
+        ctx3dFallback.fill();
+        ctx3dFallback.strokeStyle = poly.isSel ? "#5eead4" : "rgba(15,23,42,0.45)";
+        ctx3dFallback.lineWidth = poly.isSel ? 1.5 : 0.7;
+        ctx3dFallback.stroke();
+      });
+
+      // Draw Coaxial Spindle Centerline (Y=0, Z=150) & Guide Roller Axis (Y=0, Z=285)
+      if (showAxes) {
+        const s0 = proj(-270, 0, Z_SPINDLE), s1 = proj(230, 0, Z_SPINDLE);
+        if (s0 && s1) {
+          ctx3dFallback.strokeStyle = "#2dd4bf";
+          ctx3dFallback.lineWidth = 2;
+          ctx3dFallback.setLineDash([6, 4]);
+          ctx3dFallback.beginPath(); ctx3dFallback.moveTo(s0.x, s0.y); ctx3dFallback.lineTo(s1.x, s1.y); ctx3dFallback.stroke();
+          ctx3dFallback.setLineDash([]);
+        }
+        const g0 = proj(-50, 0, Z_GUIDE), g1 = proj(155, 0, Z_GUIDE);
+        if (g0 && g1) {
+          ctx3dFallback.strokeStyle = "#60a5fa";
+          ctx3dFallback.lineWidth = 1.6;
+          ctx3dFallback.setLineDash([5, 4]);
+          ctx3dFallback.beginPath(); ctx3dFallback.moveTo(g0.x, g0.y); ctx3dFallback.lineTo(g1.x, g1.y); ctx3dFallback.stroke();
+          ctx3dFallback.setLineDash([]);
+        }
+      }
+
+      if (highlightedFastenerPos) {
+        const fp = proj(highlightedFastenerPos[0], highlightedFastenerPos[1], highlightedFastenerPos[2]);
+        if (fp) {
+          ctx3dFallback.strokeStyle = "#facc15";
+          ctx3dFallback.lineWidth = 2.5;
+          ctx3dFallback.beginPath(); ctx3dFallback.arc(fp.x, fp.y, 12, 0, Math.PI * 2); ctx3dFallback.stroke();
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // CAMERA CONTROLLER
+    // ---------------------------------------------------------------------------
+    function updateCameraFromSpherical() {
+      if (HAS_THREE && camera) {
+        const sinPhi = Math.sin(camSpherical.phi);
+        camera.position.x = camTarget.x + camSpherical.r * sinPhi * Math.cos(camSpherical.theta);
+        camera.position.y = camTarget.y + camSpherical.r * sinPhi * Math.sin(camSpherical.theta);
+        camera.position.z = camTarget.z + camSpherical.r * Math.cos(camSpherical.phi);
+        camera.lookAt(new THREE.Vector3(camTarget.x, camTarget.y, camTarget.z));
+      }
+      needsRender = true;
+    }
+    updateCameraFromSpherical();
+
+    wrapper.addEventListener("mousedown", e => {
+      isDragging = true;
+      isRightDrag = (e.button === 2 || e.shiftKey);
+      downMouse = { x: e.clientX, y: e.clientY };
+      prevMouse = { x: e.clientX, y: e.clientY };
+      maxDragDist = 0;
+    });
+    window.addEventListener("mouseup", () => { isDragging = false; });
+    wrapper.addEventListener("contextmenu", e => e.preventDefault());
+    window.addEventListener("mousemove", e => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevMouse.x;
+      const dy = e.clientY - prevMouse.y;
+      prevMouse = { x: e.clientX, y: e.clientY };
+      maxDragDist = Math.max(maxDragDist, Math.hypot(e.clientX - downMouse.x, e.clientY - downMouse.y));
+      if (!isRightDrag) {
+        camSpherical.theta -= dx * 0.0065;
+        camSpherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, camSpherical.phi - dy * 0.0065));
+      } else {
+        camTarget.x -= dx * 0.42;
+        camTarget.z += dy * 0.42;
+      }
+      updateCameraFromSpherical();
+    });
+    wrapper.addEventListener("wheel", e => {
+      e.preventDefault();
+      camSpherical.r = Math.max(170, Math.min(1500, camSpherical.r + e.deltaY * 0.4));
+      updateCameraFromSpherical();
+    }, { passive: false });
+
+    wrapper.addEventListener("click", e => {
+      if (maxDragDist > 5 || !HAS_THREE) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseVec = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouseVec, camera);
+      const allChildren = [];
+      Object.values(partMeshes).forEach(grp => {
+        if (grp.visible) grp.traverse(ch => { if (ch.isMesh) allChildren.push(ch); });
+      });
+      const hits = raycaster.intersectObjects(allChildren, false);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj.parent && (!obj.userData || !obj.userData.part)) obj = obj.parent;
+        if (obj && obj.userData && obj.userData.part) {
+          selectPart(obj.userData.part.id);
+        }
+      }
+    });
+
+    // ---------------------------------------------------------------------------
+    // 2D LIVE KINEMATIC SCHEMATIC MONITOR (X-Z & Y-Z CROSS-SECTION)
+    // ---------------------------------------------------------------------------
+    const canvas2d = document.getElementById("kinematic2dCanvas");
+    const ctx2d = canvas2d.getContext("2d");
+
+    function drawKinematic2D(L_curr, R_curr, laneIdx, laneX) {
+      const w = canvas2d.width;
+      const h = canvas2d.height;
+      if (w === 0 || h === 0) return;
+      ctx2d.clearRect(0, 0, w, h);
+
+      ctx2d.strokeStyle = "#1e293b";
+      ctx2d.lineWidth = 1;
+      for (let x = 0; x < w; x += 36) { ctx2d.beginPath(); ctx2d.moveTo(x, 0); ctx2d.lineTo(x, h); ctx2d.stroke(); }
+      for (let y = 0; y < h; y += 26) { ctx2d.beginPath(); ctx2d.moveTo(0, y); ctx2d.lineTo(w, y); ctx2d.stroke(); }
+
+      const leftW = Math.floor(w * 0.62);
+      const cy = Math.floor(h * 0.58);
+      const xOrigin = Math.floor(leftW * 0.22);
+      const scaleX = (leftW * 0.52) / 130.0;
+      const scaleR = (h * 0.40) / 115.0;
+
+      ctx2d.strokeStyle = "#14b8a6";
+      ctx2d.setLineDash([5, 4]);
+      ctx2d.beginPath();
+      ctx2d.moveTo(12, cy);
+      ctx2d.lineTo(leftW - 12, cy);
+      ctx2d.stroke();
+      ctx2d.setLineDash([]);
+
+      ctx2d.fillStyle = "#64748b";
+      ctx2d.fillRect(xOrigin - 35 * scaleX, cy - 8.5 * scaleR, 165 * scaleX, 17 * scaleR);
+
+      ctx2d.fillStyle = "#cbd5e1";
+      ctx2d.fillRect(xOrigin, cy - 110 * scaleR, 3.5 * scaleX, 220 * scaleR);
+
+      ctx2d.fillStyle = "#0d9488";
+      ctx2d.beginPath();
+      ctx2d.moveTo(xOrigin + 3 * scaleX, cy - 52 * scaleR);
+      ctx2d.lineTo(xOrigin + 113 * scaleX, cy - 48.15 * scaleR);
+      ctx2d.lineTo(xOrigin + 113 * scaleX, cy - 45.5 * scaleR);
+      ctx2d.lineTo(xOrigin + 3 * scaleX, cy - 49.5 * scaleR);
+      ctx2d.closePath();
+      ctx2d.fill();
+
+      const remCoilShiftX = Math.max(0, removalProgress - 3.0) * 55 * scaleX;
+      for (let i = 0; i < 4; i++) {
+        const laneStartPct = i * 25.0;
+        const f = Math.max(0, Math.min(1, (windingPct - laneStartPct) / 25.0));
+        if (f > 0.005) {
+          const rc = LANE_CORE_R[i];
+          const ro = Math.sqrt(rc * rc + f * (96.58 * 96.58 - 50.075 * 50.075));
+          const lx = xOrigin + LANE_X_STARTS[i] * scaleX + remCoilShiftX;
+          const lw = 24.5 * scaleX;
+          ctx2d.fillStyle = (i + 1 === laneIdx && isWinding) ? "#3b82f6" : "#334155";
+          ctx2d.fillRect(lx, cy - ro * scaleR, lw, (ro - rc) * scaleR);
+          ctx2d.fillRect(lx, cy + rc * scaleR, lw, (ro - rc) * scaleR);
+          ctx2d.strokeStyle = "#93c5fd";
+          ctx2d.strokeRect(lx, cy - ro * scaleR, lw, (ro - rc) * scaleR);
+        }
+      }
+
+      const remFlangeShiftX = Math.max(0, Math.min(1, removalProgress - 2.0)) * 38 * scaleX + remCoilShiftX;
+      ctx2d.fillStyle = "#cbd5e1";
+      ctx2d.fillRect(xOrigin + 113 * scaleX + remFlangeShiftX, cy - 110 * scaleR, 3.5 * scaleX, 220 * scaleR);
+
+      const zGuideY = 14;
+      const activeX = xOrigin + laneX * scaleX;
+      ctx2d.fillStyle = "#f59e0b";
+      ctx2d.beginPath();
+      ctx2d.arc(activeX, zGuideY, 5, 0, Math.PI * 2);
+      ctx2d.fill();
+      if (removalProgress < 0.1) {
+        ctx2d.strokeStyle = "#38bdf8";
+        ctx2d.lineWidth = 2;
+        ctx2d.beginPath();
+        ctx2d.moveTo(activeX, zGuideY + 5);
+        ctx2d.lineTo(activeX, cy - R_curr * scaleR);
+        ctx2d.stroke();
+      }
+
+      ctx2d.fillStyle = "#94a3b8";
+      ctx2d.font = "10px monospace";
+      ctx2d.fillText("Längsschnitt X-Z (2°-Konus & 4 Spuren)", 8, 12);
+      ctx2d.fillStyle = "#2dd4bf";
+      ctx2d.fillText("Z=150 mm", 8, cy - 4);
+
+      ctx2d.strokeStyle = "#334155";
+      ctx2d.beginPath();
+      ctx2d.moveTo(leftW, 0);
+      ctx2d.lineTo(leftW, h);
+      ctx2d.stroke();
+
+      const rCx = leftW + Math.floor((w - leftW) * 0.58);
+      const rCy = Math.floor(h * 0.58);
+      const rScale = (h * 0.36) / 110.0;
+
+      ctx2d.strokeStyle = "#475569";
+      ctx2d.lineWidth = 1.5;
+      ctx2d.beginPath();
+      ctx2d.arc(rCx, rCy, 110 * rScale, 0, Math.PI * 2);
+      ctx2d.stroke();
+
+      ctx2d.fillStyle = "rgba(30, 58, 138, 0.55)";
+      ctx2d.beginPath();
+      ctx2d.arc(rCx, rCy, R_curr * rScale, 0, Math.PI * 2);
+      ctx2d.fill();
+
+      ctx2d.fillStyle = "#0f766e";
+      ctx2d.beginPath();
+      ctx2d.arc(rCx, rCy, 50 * rScale, 0, Math.PI * 2);
+      ctx2d.fill();
+
+      ctx2d.strokeStyle = "#2dd4bf";
+      ctx2d.lineWidth = 2.2;
+      for (let k = 0; k < 3; k++) {
+        const a = spinAngle + k * (Math.PI * 2 / 3);
+        ctx2d.beginPath();
+        ctx2d.moveTo(rCx + Math.cos(a) * 45 * rScale, rCy - Math.sin(a) * 45 * rScale);
+        ctx2d.lineTo(rCx + Math.cos(a) * 103 * rScale, rCy - Math.sin(a) * 103 * rScale);
+        ctx2d.stroke();
+      }
+
+      const gX = rCx;
+      const gY = rCy - 125 * rScale;
+      ctx2d.fillStyle = "#2563eb";
+      ctx2d.beginPath();
+      ctx2d.arc(gX, gY, 19 * rScale, 0, Math.PI * 2);
+      ctx2d.fill();
+
+      const vX = leftW + 24;
+      const vY = h - 14;
+      ctx2d.fillStyle = "#0284c7";
+      ctx2d.fillRect(vX - 6, vY - 8, 12, 10);
+      ctx2d.strokeStyle = "#38bdf8";
+      ctx2d.lineWidth = 1.8;
+      ctx2d.beginPath();
+      ctx2d.moveTo(vX, vY - 4);
+      ctx2d.lineTo(gX - 14 * rScale, gY);
+      ctx2d.lineTo(rCx + R_curr * rScale * 0.7, rCy - R_curr * rScale * 0.7);
+      ctx2d.stroke();
+
+      ctx2d.fillStyle = "#94a3b8";
+      ctx2d.fillText("Querschnitt Y-Z (Koaxial)", leftW + 8, 12);
+    }
+
+    // ---------------------------------------------------------------------------
+    // UPDATE SCENE TRANSFORMS & TELEMETRY HUD
+    // ---------------------------------------------------------------------------
+    function updateSceneTransforms(forceHud = false) {
+      const fExp = explodePct / 100.0;
+      const remPinZ    = Math.max(0, Math.min(1, removalProgress - 0.0)) * 78.0;
+      const remWasherX = Math.max(0, Math.min(1, removalProgress - 1.0)) * 68.0;
+      const remFlangeX = Math.max(0, Math.min(1, removalProgress - 2.0)) * 105.0;
+      const remCoilX   = Math.max(0, Math.min(1, removalProgress - 3.0)) * 165.0;
+
+      const L_curr = 40.0 * (windingPct / 100.0);
+      const R_curr = Math.sqrt(50.075 * 50.075 + (L_curr * 1000.0 * 1.5) / (Math.PI * 4.0 * 0.70));
+      const margin = 110.0 - R_curr;
+      const N_curr = (L_curr / 40.0) * 86.82;
+      const laneFloat = Math.max(0, Math.min(3.999, (windingPct / 100.0) * 4.0));
+      const laneIdx = Math.min(4, Math.max(1, Math.floor(laneFloat) + 1));
+      const laneX = LANE_X_CENTERS[laneIdx - 1];
+
+      if (HAS_THREE) {
+        SSOT.parts.forEach(p => {
+          const grp = partMeshes[p.id];
+          if (!grp) return;
+          let dx = p.explode[0] * fExp, dy = p.explode[1] * fExp, dz = p.explode[2] * fExp;
+          if (p.id === "P-06") dz += remPinZ;
+          if (p.id === "P-05") dx += remWasherX + remFlangeX + remCoilX * 0.4;
+          if (p.id === "P-04") dx += remFlangeX + remCoilX * 0.5;
+          if (p.id === "REF-01" || p.id === "P-03") dx += remCoilX;
+
+          if (p.rotates) {
+            grp.position.set(dx, dy, Z_SPINDLE + dz);
+            grp.rotation.x = spinAngle;
+          } else if (p.id === "P-15") {
+            grp.position.set(dx, dy, Z_GUIDE + dz);
+            grp.rotation.x = rollerAngle;
+          } else {
+            grp.position.set(dx, dy, dz);
+          }
+        });
+
+        if (rotatingFastenersGroup) rotatingFastenersGroup.rotation.x = spinAngle;
+
+        coilLaneObjs.forEach((laneObj, idx) => {
+          const laneStartPct = idx * 25.0;
+          const laneFill = Math.max(0, Math.min(1, (windingPct - laneStartPct) / 25.0));
+          laneObj.group.visible = laneFill > 0.005;
+          if (laneFill > 0.005) {
+            const rc = laneObj.rCore;
+            const rOut = Math.sqrt(rc * rc + laneFill * (96.58 * 96.58 - 50.075 * 50.075));
+            laneObj.updateOuterRadius(rOut);
+          }
+        });
+
+        if (partMeshes["P-03"] && partVisibility["P-03"]) {
+          partMeshes["P-03"].visible = (windingPct >= 99.5 || !isWinding);
+        }
+
+        if (activeCollarShoeMesh) activeCollarShoeMesh.position.x = laneX;
+        if (dynamicTapeMesh) {
+          dynamicTapeMesh.group.position.x = laneX;
+          dynamicTapeMesh.group.visible = (removalProgress < 0.2);
+          dynamicTapeMesh.segBMesh.position.set(0, 12.0 + (R_curr - 50.0) * 0.22, 218.0 + (R_curr - 50.0) * 0.25);
+          dynamicTapeMesh.segBMesh.rotation.x = -0.12 - (R_curr - 50.0) * 0.0035;
+
+          dynamicEmitterMeshes.forEach((em, k) => {
+            const s = ((tapeFlowOffset + k / 6.0) % 1.0);
+            if (s < 0.65) {
+              const u = s / 0.65;
+              em.position.set(0, -120.0 * (1 - u), 46.0 + 258.0 * u);
+              em.rotation.x = -1.135;
+            } else {
+              const u = (s - 0.65) / 0.35;
+              em.position.set(0, 18.0 * (1 - u) + (R_curr * 0.35) * u, 290.0 * (1 - u) + (150.0 + R_curr * 0.75) * u);
+              em.rotation.x = 0;
+            }
+          });
+        }
+      }
+
+      drawKinematic2D(L_curr, R_curr, laneIdx, laneX);
+
+      const now = performance.now();
+      if (forceHud || (now - lastHudUpdateMs > 80)) {
+        lastHudUpdateMs = now;
+        const M_curr = (35.0 * (R_curr / 1000.0)).toFixed(2);
+        const v_curr = ((2 * Math.PI * R_curr * 21.704) / 60000.0).toFixed(2);
+        const t_sec = Math.round((windingPct / 100.0) * 240);
+        const t_str = Math.floor(t_sec / 60) + ":" + String(t_sec % 60).padStart(2, "0");
+
+        document.getElementById("hudTapeLen").textContent = L_curr.toFixed(1).replace(".", ",") + " m / 40,0 m";
+        document.getElementById("hudLaneInfo").textContent = "Spur " + laneIdx + " (X=" + laneX + " mm) • " + N_curr.toFixed(1).replace(".", ",") + " Umdr.";
+        document.getElementById("hudCoilRad").textContent = "R = " + R_curr.toFixed(2).replace(".", ",") + " mm";
+        document.getElementById("hudFlangeMargin").textContent = "Reserve zu Ø220: " + margin.toFixed(2).replace(".", ",") + " mm";
+        document.getElementById("hudRpmTime").textContent = "21,7 rpm • " + t_str + " min";
+        document.getElementById("hudTorqueVal").textContent = "M = " + M_curr.replace(".", ",") + " Nm (v = " + v_curr.replace(".", ",") + " m/s)";
+        document.getElementById("lblWindPct").textContent = L_curr.toFixed(1).replace(".", ",") + " m (" + Math.round(windingPct) + "%)";
+        document.getElementById("lblExplodePct").textContent = Math.round(explodePct) + "% " + (explodePct < 1 ? "(Montiert)" : "(Explodiert)");
+        document.getElementById("kinematicSubLabel").textContent = "Spur " + laneIdx + " aktiv (X = " + laneX.toFixed(1).replace(".", ",") + " mm) • R_coil = " + R_curr.toFixed(2).replace(".", ",") + " mm";
+
+        const statusEl = document.getElementById("hudStatusBanner");
+        if (isRemovalAnim || removalProgress > 0.05) {
+          const rStep = Math.min(4, Math.ceil(removalProgress));
+          const rNames = [
+            "0: Betriebsbereit",
+            "1: Sicherungspin P-06 in +Z gezogen",
+            "2: Haltescheibe P-05 in +X abgezogen",
+            "3: Vorderflansch P-04 in +X abgezogen",
+            "4: Umreifte 40m-Rolle in +X vom 2°-Konus entnommen"
+          ];
+          statusEl.textContent = "⇥ Entnahme: " + rNames[rStep];
+        } else if (isWinding) {
+          statusEl.textContent = "⟳ Wickelt Spur " + laneIdx + " (X=" + laneX + " mm) • L = " + L_curr.toFixed(1).replace(".", ",") + " m";
+        } else if (isSpinning) {
+          statusEl.textContent = "⟳ Koaxialer Dauerlauf aktiv (Y=0, Z=150,0 mm)";
+        } else {
+          statusEl.textContent = windingPct >= 99.5 ? "✓ Bereit (40,0 m gewickelt & 3-fach umreift)" : "⏸ Pausiert bei L = " + L_curr.toFixed(1).replace(".", ",") + " m";
+        }
+      }
+      needsRender = true;
+    }
+
+    // ---------------------------------------------------------------------------
+    // COMPONENT TREE & INSPECTOR SELECTION
+    // ---------------------------------------------------------------------------
+    function buildComponentTreeDOM() {
+      const container = document.getElementById("componentTreeContainer");
+      container.innerHTML = "";
+      treeRowMap = {};
+      SSOT.parts.forEach(p => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:2px;";
+        if (p.id === selectedPartId) row.classList.add("part-row-selected");
+        row.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;overflow:hidden;padding-right:6px;">
+            <span style="width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;background:${p.color}"></span>
+            <span style="font-family:monospace;font-weight:700;color:#5eead4;">${p.id}</span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e2e8f0;">${p.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span style="font-size:10px;font-family:monospace;color:#94a3b8;">${(p.mass_tot*1000).toFixed(0)}g</span>
+            <button data-vis="${p.id}" class="btn-vis" style="padding:2px 6px;border-radius:3px;font-size:10px;background:#334155;color:#5eead4;border:none;cursor:pointer;">👁</button>
+          </div>
+        `;
+        const visBtn = row.querySelector(".btn-vis");
+        row.addEventListener("click", e => {
+          if (e.target === visBtn || e.target.closest(".btn-vis")) {
+            partVisibility[p.id] = !partVisibility[p.id];
+            if (partMeshes[p.id]) partMeshes[p.id].visible = partVisibility[p.id];
+            updateVisButtonState(p.id);
+            needsRender = true;
+            return;
+          }
+          selectPart(p.id);
+        });
+        container.appendChild(row);
+        treeRowMap[p.id] = { row, visBtn, searchStr: (p.id + " " + p.name + " " + p.group).toLowerCase() };
+      });
+    }
+
+    function updateVisButtonState(id) {
+      const item = treeRowMap[id];
+      if (!item) return;
+      const vis = partVisibility[id];
+      item.visBtn.style.background = vis ? "#334155" : "#4c0519";
+      item.visBtn.style.color = vis ? "#5eead4" : "#fda4af";
+      item.visBtn.textContent = vis ? "👁" : "✕";
+    }
+
+    function filterComponentTree(filterText = "") {
+      const q = filterText.trim().toLowerCase();
+      Object.values(treeRowMap).forEach(item => {
+        item.row.style.display = (!q || item.searchStr.includes(q)) ? "flex" : "none";
+      });
+    }
+
+    function selectPart(partId, partnerId = null) {
+      selectedPartId = partId;
+      partnerPartId = partnerId;
+      highlightedFastenerPos = null;
+      if (fastenerMarkerMesh) fastenerMarkerMesh.visible = false;
+
+      SSOT.parts.forEach(p => {
+        const grp = partMeshes[p.id];
+        if (grp) {
+          const isSel = (p.id === partId || p.id === partnerId);
+          grp.traverse(ch => {
+            if (ch.isMesh && ch.material && ch.material.emissive) {
+              ch.material.emissive.setHex(isSel ? (p.id === partId ? 0x0d9488 : 0xd97706) : 0x000000);
+              ch.material.emissiveIntensity = isSel ? 0.5 : 0.0;
+            }
+          });
+        }
+        if (treeRowMap[p.id]) {
+          if (p.id === partId) treeRowMap[p.id].row.classList.add("part-row-selected");
+          else treeRowMap[p.id].row.classList.remove("part-row-selected");
+        }
+      });
+
+      const p = SSOT.parts.find(x => x.id === partId) || SSOT.parts[0];
+      document.getElementById("hudSelectedId").textContent = p.id + " " + p.name;
+      document.getElementById("hudSelectedMass").textContent = p.mat + " • " + p.mass_tot.toFixed(3).replace(".", ",") + " kg";
+      document.getElementById("inspPartId").textContent = p.id;
+      document.getElementById("inspPartDrw").textContent = "Zeichnung: " + p.drw;
+      document.getElementById("inspPartName").textContent = p.name;
+      document.getElementById("inspPartGroup").textContent = "Baugruppe: " + p.group;
+      document.getElementById("inspPartMat").textContent = p.mat;
+      document.getElementById("inspPartMass").textContent = p.qty + " Stk • " + p.mass_tot.toFixed(3).replace(".", ",") + " kg";
+      document.getElementById("inspPartProc").textContent = p.proc;
+      document.getElementById("inspPartDims").textContent = p.dims;
+      document.getElementById("inspPartFits").textContent = p.fits;
+      document.getElementById("inspPartXyz").textContent = p.xyz;
+      document.getElementById("inspPartMates").textContent = p.mates;
+      document.getElementById("inspPartFast").textContent = p.fasteners;
+      needsRender = true;
+    }
+
+    function renderFastenersAndJoints() {
+      const fCont = document.getElementById("fastenerListContainer");
+      SSOT.fasteners.forEach(f => {
+        const card = document.createElement("div");
+        card.style.cssText = "padding:10px;border-radius:6px;background:rgba(30,41,59,0.85);border:1px solid #334155;cursor:pointer;font-size:12px;";
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-family:monospace;font-weight:700;color:#fcd34d;">${f.id}</span>
+            <span style="font-size:11px;font-weight:600;color:#5eead4;">${f.torque}</span>
+          </div>
+          <div style="font-weight:600;color:#fff;margin-top:2px;">${f.norm}</div>
+          <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">${f.parts}</div>
+          <div style="font-size:11px;font-family:monospace;color:#94a3b8;margin-top:2px;">${f.xyz} • Richtung: ${f.dir}</div>
+          <div style="font-size:11px;color:#34d399;margin-top:2px;">Werkzeug: ${f.access}</div>
+        `;
+        card.addEventListener("click", () => {
+          highlightedFastenerPos = f.pos3d;
+          if (fastenerMarkerMesh) {
+            fastenerMarkerMesh.position.set(f.pos3d[0], f.pos3d[1], f.pos3d[2]);
+            fastenerMarkerMesh.visible = true;
+          }
+          needsRender = true;
+        });
+        fCont.appendChild(card);
+      });
+
+      const jCont = document.getElementById("jointListContainer");
+      SSOT.joints.forEach(j => {
+        const card = document.createElement("div");
+        card.style.cssText = "padding:10px;border-radius:6px;background:rgba(30,41,59,0.85);border:1px solid #334155;cursor:pointer;font-size:12px;";
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-family:monospace;font-weight:700;color:#5eead4;">${j.id}</span>
+            <span style="font-family:monospace;font-size:11px;color:#fcd34d;">${j.a} ↔ ${j.b}</span>
+          </div>
+          <div style="font-weight:600;color:#fff;margin-top:2px;">${j.type}</div>
+          <div style="font-size:11px;color:#e2e8f0;margin-top:2px;">${j.fit}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Befestiger: ${j.fast} • Prüfung: ${j.check}</div>
+        `;
+        card.addEventListener("click", () => selectPart(j.a, j.b));
+        jCont.appendChild(card);
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // UI EVENT LISTENERS
+    // ---------------------------------------------------------------------------
+    document.getElementById("inputTreeFilter").addEventListener("input", e => filterComponentTree(e.target.value));
+    document.getElementById("btnShowAllParts").addEventListener("click", () => {
+      SSOT.parts.forEach(p => {
+        partVisibility[p.id] = true;
+        if (partMeshes[p.id]) partMeshes[p.id].visible = true;
+        updateVisButtonState(p.id);
+      });
+      needsRender = true;
+    });
+    document.getElementById("btnIsolateSelected").addEventListener("click", () => {
+      SSOT.parts.forEach(p => {
+        const vis = (p.id === selectedPartId || p.id === partnerPartId);
+        partVisibility[p.id] = vis;
+        if (partMeshes[p.id]) partMeshes[p.id].visible = vis;
+        updateVisButtonState(p.id);
+      });
+      needsRender = true;
+    });
+
+    function setCamPreset(r, theta, phi, btnId) {
+      camTarget = { x: 5.0, y: -15.0, z: 148.0 };
+      camSpherical = { r, theta, phi };
+      updateCameraFromSpherical();
+      ["btnCamIso", "btnCamXZ", "btnCamYZ", "btnCamXY"].forEach(id => {
+        const el = document.getElementById(id);
+        el.style.background = (id === btnId) ? "#0f766e" : "transparent";
+        el.style.color = (id === btnId) ? "#fff" : "#cbd5e1";
+      });
+    }
+    document.getElementById("btnCamIso").addEventListener("click", () => setCamPreset(610, -0.82, 1.10, "btnCamIso"));
+    document.getElementById("btnCamXZ").addEventListener("click", () => setCamPreset(610, -Math.PI / 2, Math.PI / 2, "btnCamXZ"));
+    document.getElementById("btnCamYZ").addEventListener("click", () => setCamPreset(610, 0, Math.PI / 2, "btnCamYZ"));
+    document.getElementById("btnCamXY").addEventListener("click", () => setCamPreset(610, -Math.PI / 2, 0.06, "btnCamXY"));
+
+    document.getElementById("selAnimSpeed").addEventListener("change", e => {
+      animSpeed = parseFloat(e.target.value) || 1.0;
+    });
+
+    document.getElementById("chkShowAxes").addEventListener("change", e => {
+      showAxes = e.target.checked;
+      if (axesHelperGroup) axesHelperGroup.visible = showAxes;
+      needsRender = true;
+    });
+
+    function syncAnimButtons() {
+      document.getElementById("btnSpinToggle").textContent = isSpinning ? "⏸ Drehung Stop" : "▶ Drehanimation";
+      document.getElementById("btnWindToggle").textContent = isWinding  ? "⏸ Wickeln Stop" : "▶ 40m-Wickelsimulation";
+      document.getElementById("btnRemovalAnim").textContent = isRemovalAnim ? "⏸ Entnahme Stop" : "▶ +X Entnahme-Demo";
+    }
+
+    document.getElementById("btnSpinToggle").addEventListener("click", () => {
+      isSpinning = !isSpinning;
+      if (isSpinning) isRemovalAnim = false;
+      syncAnimButtons();
+      updateSceneTransforms(true);
+    });
+
+    document.getElementById("btnWindToggle").addEventListener("click", () => {
+      isWinding = !isWinding;
+      if (isWinding) {
+        isRemovalAnim = false;
+        removalProgress = 0;
+        updateRemovalButtonsUI(0);
+        if (windingPct >= 99.5) windingPct = 0;
+        isSpinning = true;
+      } else {
+        isSpinning = false;
+      }
+      syncAnimButtons();
+      updateSceneTransforms(true);
+    });
+
+    document.getElementById("btnRemovalAnim").addEventListener("click", () => {
+      isRemovalAnim = !isRemovalAnim;
+      if (isRemovalAnim) {
+        isWinding = false;
+        isSpinning = false;
+        windingPct = 100;
+        document.getElementById("sliderWinding").value = 100;
+        if (removalProgress >= 3.95) removalProgress = 0;
+      }
+      syncAnimButtons();
+      updateSceneTransforms(true);
+    });
+
+    document.getElementById("btnToggleExplodeAnim").addEventListener("click", () => {
+      isExplodeAnim = !isExplodeAnim;
+      if (isExplodeAnim) explodeAnimDir = (explodePct >= 95) ? -1 : 1;
+    });
+
+    document.getElementById("btnResetAll").addEventListener("click", () => {
+      isSpinning = false;
+      isWinding = false;
+      isRemovalAnim = false;
+      isExplodeAnim = false;
+      windingPct = 100;
+      explodePct = 0;
+      removalProgress = 0;
+      spinAngle = 0;
+      rollerAngle = 0;
+      document.getElementById("sliderWinding").value = 100;
+      document.getElementById("sliderExplode").value = 0;
+      updateRemovalButtonsUI(0);
+      syncAnimButtons();
+      SSOT.parts.forEach(p => {
+        partVisibility[p.id] = true;
+        if (partMeshes[p.id]) partMeshes[p.id].visible = true;
+        updateVisButtonState(p.id);
+      });
+      setCamPreset(610, -0.82, 1.10, "btnCamIso");
+      updateSceneTransforms(true);
+    });
+
+    document.getElementById("sliderWinding").addEventListener("input", e => {
+      windingPct = parseFloat(e.target.value);
+      updateSceneTransforms(true);
+    });
+    document.getElementById("sliderExplode").addEventListener("input", e => {
+      explodePct = parseFloat(e.target.value);
+      updateSceneTransforms(true);
+    });
+
+    const remLabels = [
+      "0: Betriebsbereit (Umreift)",
+      "1: Sicherungspin P-06 in +Z gezogen",
+      "2: Haltescheibe P-05 in +X abgezogen",
+      "3: Vorderflansch P-04 in +X abgezogen",
+      "4: Umreifte 40m-Rolle in +X entnommen"
+    ];
+    function updateRemovalButtonsUI(stepInt) {
+      document.getElementById("lblRemovalStep").textContent = remLabels[stepInt] || remLabels[0];
+      document.querySelectorAll(".btn-rem").forEach(b => {
+        const s = Number(b.getAttribute("data-rem"));
+        b.style.background = (s === stepInt) ? "#0f766e" : "#334155";
+        b.style.color = (s === stepInt) ? "#fff" : "#e2e8f0";
+      });
+    }
+    document.querySelectorAll(".btn-rem").forEach(btn => {
+      btn.addEventListener("click", () => {
+        isRemovalAnim = false;
+        syncAnimButtons();
+        const step = Number(btn.getAttribute("data-rem"));
+        removalProgress = step;
+        updateRemovalButtonsUI(step);
+        updateSceneTransforms(true);
+      });
+    });
+
+    const assyDescs = {
+      1: "Schritt 1: Grundrahmen (P-17..P-23) mit bodenfreien M6-Schrauben (+Z) montiert.",
+      2: "Schritt 2: Haupt-Chassisplatte P-11 und 8-mm-Führungsarm P-12 verschraubt.",
+      3: "Schritt 3: Hauptspindel P-07 (Ø17 k5) mit 2× SKF 6003-2RS im Lagergehäuse P-09 montiert.",
+      4: "Schritt 4: Hinterflansch P-01 + Konische Trommel P-02 mit M6-Querstift F-21 gekoppelt.",
+      5: "Schritt 5: Führungsrolle P-15 (2× 6002-2RS), Vorderflansch P-04 und Schnellverschluss komplett."
+    };
+    document.querySelectorAll(".btn-assy").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const step = Number(btn.getAttribute("data-assy"));
+        SSOT.parts.forEach(p => {
+          const vis = (p.step_assy <= step);
+          partVisibility[p.id] = vis;
+          if (partMeshes[p.id]) partMeshes[p.id].visible = vis;
+          updateVisButtonState(p.id);
+        });
+        document.getElementById("lblAssyStepDesc").textContent = assyDescs[step];
+        document.querySelectorAll(".btn-assy").forEach(b => {
+          b.style.background = "#334155"; b.style.color = "#e2e8f0";
+        });
+        btn.style.background = "#0f766e"; btn.style.color = "#fff";
+        needsRender = true;
+      });
+    });
+
+    function updateClipping() {
+      if (!HAS_THREE) return;
+      const enabled = document.getElementById("chkSectionCut").checked;
+      renderer.localClippingEnabled = enabled;
+      const axis = document.getElementById("selSectionAxis").value;
+      const pos = Number(document.getElementById("sliderSectionPos").value);
+      if (axis === "X") clipPlane.normal.set(-1, 0, 0);
+      else if (axis === "Y") clipPlane.normal.set(0, -1, 0);
+      else clipPlane.normal.set(0, 0, -1);
+      clipPlane.constant = pos;
+
+      Object.values(partMeshes).forEach(grp => {
+        grp.traverse(ch => {
+          if (ch.isMesh && ch.material) {
+            ch.material.clippingPlanes = enabled ? [clipPlane] : [];
+          }
+        });
+      });
+      needsRender = true;
+    }
+    document.getElementById("chkSectionCut").addEventListener("change", updateClipping);
+    document.getElementById("selSectionAxis").addEventListener("change", updateClipping);
+    document.getElementById("sliderSectionPos").addEventListener("input", updateClipping);
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.getAttribute("data-tab");
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active-tab"));
+        btn.classList.add("active-tab");
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+        document.getElementById("tabContent_" + target).classList.remove("hidden");
+      });
+    });
+
+    function triggerDownload(filename, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      document.getElementById("exportStatusMsg").textContent = "✓ Exportiert: " + filename;
+    }
+
+    document.getElementById("btnExportBomCSV").addEventListener("click", () => {
+      const hdr = "Teile-ID;Bezeichnung;Baugruppe;Menge;Werkstoff;Hauptabmessungen;Passungen;XYZ;Einzelmasse_kg;Gesamtmasse_kg;Zeichnung\n";
+      const rows = SSOT.parts.map(p => `${p.id};"${p.name}";"${p.group}";${p.qty};"${p.mat}";"${p.dims}";"${p.fits}";"${p.xyz}";${p.mass_unit};${p.mass_tot};${p.drw}`).join("\n");
+      triggerDownload("Navaneeth_Compact_40M_v2_BOM.csv", hdr + rows, "text/csv;charset=utf-8");
+    });
+
+    document.getElementById("btnExportSsotJSON").addEventListener("click", () => {
+      triggerDownload("Navaneeth_Compact_40M_v2_CAD_SSOT.json", JSON.stringify(SSOT, null, 2), "application/json");
+    });
+
+    document.getElementById("btnExportSelectedSTL").addEventListener("click", () => {
+      const p = SSOT.parts.find(x => x.id === selectedPartId) || SSOT.parts[0];
+      let stl = `solid Navaneeth_${selectedPartId}\n  facet normal 0 0 1\n    outer loop\n      vertex 0 0 0\n      vertex 10 0 0\n      vertex 0 10 0\n    endloop\n  endfacet\nendsolid Navaneeth_${selectedPartId}\n`;
+      if (HAS_THREE && partMeshes[selectedPartId]) {
+        stl = `solid Navaneeth_${selectedPartId}\n`;
+        partMeshes[selectedPartId].traverse(ch => {
+          if (ch.isMesh && ch.geometry) {
+            const geom = ch.geometry.toNonIndexed();
+            const pos = geom.attributes.position;
+            for (let i = 0; i < pos.count; i += 3) {
+              stl += `  facet normal 0 0 1\n    outer loop\n`;
+              for (let k = 0; k < 3; k++) {
+                stl += `      vertex ${pos.getX(i+k).toFixed(3)} ${pos.getY(i+k).toFixed(3)} ${pos.getZ(i+k).toFixed(3)}\n`;
+              }
+              stl += `    endloop\n  endfacet\n`;
+            }
+          }
+        });
+        stl += `endsolid Navaneeth_${selectedPartId}\n`;
+      }
+      triggerDownload(`Navaneeth_Compact_40M_v2_${selectedPartId}.stl`, stl, "application/sla");
+    });
+
+    function onResize() {
+      const w = wrapper.clientWidth || 640;
+      const h = wrapper.clientHeight || 380;
+      if (HAS_THREE && renderer) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      } else {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const p2d = canvas2d.parentElement;
+      canvas2d.width = p2d.clientWidth || 600;
+      canvas2d.height = p2d.clientHeight || 125;
+      updateSceneTransforms(true);
+    }
+    window.addEventListener("resize", onResize);
+
+    let prevTime = performance.now();
+    let frameCount = 0;
+    let fpsAccum = 0;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - prevTime) / 1000.0);
+      prevTime = now;
+
+      frameCount++;
+      fpsAccum += dt;
+      if (fpsAccum >= 0.5) {
+        const fps = Math.min(60, Math.round(frameCount / fpsAccum));
+        document.getElementById("fpsBadge").textContent = fps + " FPS";
+        frameCount = 0;
+        fpsAccum = 0;
+      }
+
+      let activeAnim = false;
+
+      if (isSpinning) {
+        const dTheta = 2.4 * animSpeed * dt;
+        spinAngle = (spinAngle + dTheta) % (Math.PI * 2);
+        const L_curr = 40.0 * (windingPct / 100.0);
+        const R_curr = Math.sqrt(50.075 * 50.075 + (L_curr * 1000.0 * 1.5) / (Math.PI * 4.0 * 0.70));
+        rollerAngle = (rollerAngle + dTheta * (R_curr / 19.0)) % (Math.PI * 2);
+        tapeFlowOffset = (tapeFlowOffset + 0.85 * animSpeed * dt) % 1.0;
+        activeAnim = true;
+      }
+
+      if (isWinding) {
+        windingPct = Math.min(100.0, windingPct + 9.5 * animSpeed * dt);
+        document.getElementById("sliderWinding").value = windingPct;
+        if (windingPct >= 100.0) {
+          windingPct = 100.0;
+          isWinding = false;
+          isSpinning = false;
+          syncAnimButtons();
+        }
+        activeAnim = true;
+      }
+
+      if (isRemovalAnim) {
+        removalProgress = Math.min(4.0, removalProgress + 0.85 * animSpeed * dt);
+        updateRemovalButtonsUI(Math.min(4, Math.ceil(removalProgress)));
+        if (removalProgress >= 4.0) {
+          isRemovalAnim = false;
+          syncAnimButtons();
+        }
+        activeAnim = true;
+      }
+
+      if (isExplodeAnim) {
+        explodePct += explodeAnimDir * 35.0 * animSpeed * dt;
+        if (explodePct >= 100.0) { explodePct = 100.0; isExplodeAnim = false; }
+        if (explodePct <= 0.0)   { explodePct = 0.0;   isExplodeAnim = false; }
+        document.getElementById("sliderExplode").value = explodePct;
+        activeAnim = true;
+      }
+
+      if (activeAnim) {
+        updateSceneTransforms(false);
+      }
+
+      if (needsRender) {
+        if (HAS_THREE && renderer) renderer.render(scene, camera);
+        else renderFallback3DCanvas();
+        needsRender = false;
+      }
+    }
+
+    window.addEventListener("load", () => {
+      buildComponentTreeDOM();
+      renderFastenersAndJoints();
+      selectPart("P-07");
+      onResize();
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>

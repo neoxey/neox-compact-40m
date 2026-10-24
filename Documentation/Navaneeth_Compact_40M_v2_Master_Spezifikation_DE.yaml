@@ -1,0 +1,552 @@
+projekt:
+  name: "Navaneeth Compact 40M v2.0"
+  dokumenttyp: "Deutsche Master-Spezifikation für CAD, Berechnungen, Dokumentation und Web-Viewer"
+  revision: "0.1 – Planungsbasis"
+  status: "Anforderungen erfasst; Geometrie und sicherheitskritische Funktionen noch zu validieren"
+  zweck: >
+    Dieses Dokument ist die verbindliche Arbeitsanweisung für einen deutschen KI-/CAD-Agenten.
+    Es beschreibt die Maschine, die bekannten Ausgangsmaße, die offenen technischen Konflikte,
+    die geforderten CAD- und Web-Artefakte sowie die Prüf- und Freigabekriterien.
+    Es ist eine YAML-Datei, kein fertiger CAD-Datensatz und kein Nachweis einer bestandenen Prüfung.
+
+  rollen_und_arbeitsweise:
+    rolle: "Mechanischer Konstrukteur, CAD-Entwickler und Ersteller der Projektdokumentation"
+    anweisungen:
+      - "Das vorhandene ZIP-Paket und den vollständigen Quellcode zuerst prüfen."
+      - "Bestehende brauchbare Arbeit weiterverwenden; nicht nur eine neue Visualisierung erzeugen."
+      - "Alle Maße aus der Basisspezifikation übernehmen, sofern sie nicht als widersprüchlich oder ungeprüft markiert sind."
+      - "Widersprüche ausdrücklich protokollieren und rechnerisch oder anhand realer Herstellerdaten auflösen."
+      - "Keine unbekannten Maße, Drehmomente, Toleranzen, Materialwerte oder Prüfergebnisse erfinden."
+      - "Annahmen, Berechnungen, CAD-Prüfungen und physische Tests klar voneinander unterscheiden."
+      - "Technische Entscheidungen selbst treffen, begründen und im Änderungsprotokoll dokumentieren."
+      - "Vor einer Fertigungsfreigabe sicherheitskritische Mechanik und tatsächliche Fertigbarkeit validieren."
+      - "Keine Fertigungsreife behaupten, solange kritische Anforderungen ungeklärt sind."
+
+  feste_anforderungen:
+    maschinenzweck: "Eine einzelne, durchgehende Flach-Tropfleitung mit 40 m Länge aufwickeln."
+    tropfband:
+      produkt: "ALLWIN GOLD Flach-Tropfband"
+      herstellerangabe_aus_ausgangsdokument: "Allwin Pipes, Vijayamangalam, Erode District, Tamil Nadu, Indien"
+      nominaler_innendurchmesser_aufgeblasen_mm: 16.0
+      liegebreite_mm: 25.0
+      liegebreite_bereich_mm: [24.5, 25.5]
+      effektive_doppelwandstaerke_mm: 1.5
+      wandstaerke_einzelwand_mm: "ca. 0,6–0,8"
+      emitter_erhebungen_gesamtbreite_mm: "ca. 2,2–3,0"
+      laenge_mm: 40000
+      minimaler_trockener_biegeradius_mm: 48.0
+      packungsfaktor_urspruengliche_annahme: 0.70
+      hinweis: "Alle Bandwerte vor Fertigungsfreigabe anhand des tatsächlich verwendeten Bandes bestätigen."
+    ventilanschluss:
+      pflicht: "Das ventilseitige Ende bleibt während des Wickelns angeschlossen und stationär."
+      lastanforderung: "Wickel-, Fang- und Führungsbelastungen dürfen nicht auf den Ventilanschluss übertragen werden."
+      drehung: "Das Band darf sich nicht unkontrolliert um Spindel, Halter oder Anschluss verdrillen."
+      abnahme: "Der vollständige Bandweg und die Entnahme der gebündelten Rolle müssen geometrisch und funktional nachgewiesen werden."
+    rollenentnahme:
+      pflicht: "Die gewickelte Rolle muss vor dem Entfernen gesichert/umreift werden."
+      pflicht_2: "Die umreifte Rolle muss ohne Abtrennen des ventilseitigen Bandendes vom Wickelkörper abgenommen werden können."
+      schritte_aus_baseline:
+        - "Sicherungspin in +Z herausziehen."
+        - "Haltescheibe in +X abziehen."
+        - "Vordere frei drehbare Schutzflansche in +X abziehen."
+        - "Umreifte Rolle in +X vom konischen Wickelkörper abziehen."
+      hinweis: "Diese Sequenz nur übernehmen, wenn die endgültige Geometrie sie tatsächlich ermöglicht."
+    antrieb:
+      werkzeug: "INGCO CIDLI12206, 12-V-Akku-Schlagbohrschrauber"
+      spannung_v: 12
+      drehzahl_leerlauf_niedrig_rpm_aus_bisheriger_angabe: 400
+      drehzahl_leerlauf_hoch_rpm_aus_bisheriger_angabe: 1500
+      maximales_drehmoment_nm_aus_bisheriger_angabe: 20
+      warnung: "Diese Werte sind noch anhand des offiziellen Herstellerdatenblatts für die exakte Variante zu verifizieren. Leerlaufdrehzahl und maximales Drehmoment sind keine garantierten Betriebspunkte."
+      ziel_wickelzeit_min: 3
+      ziel_wickelzeit_max: 5
+      freigabebedingung: "Zielzeit nur akzeptieren, wenn Drehzahl, Untersetzung, Bandzug, Wellenlasten und Schutzmaßnahmen validiert sind."
+      erforderliche_merkmale:
+        - "Positive, mechanisch belastbare Drehmomentübertragung"
+        - "Berechnete Drehzahlreduzierung, falls erforderlich"
+        - "Am Maschinenrahmen abgestützte Reaktionsmomentaufnahme"
+        - "Sicher zugängliche Stoppmöglichkeit"
+        - "Schutz vor unbeabsichtigtem Anlaufen und relevanten Quetschstellen"
+    masse:
+      ziel_kg: 5.0
+      gilt_fuer: "Komplette Maschine ohne Bohrschrauber und Akku"
+      bedingung: "Zielwert anhand einer vollständigen, materialbasierten Massenbilanz nachweisen; nicht als erreicht behaupten, bevor alle Komponenten enthalten sind."
+    prioritaeten:
+      - "Kompaktheit"
+      - "Geringe Masse bei ausreichender Festigkeit"
+      - "Sichere und zuverlässige Bedienung"
+      - "40-m-Kapazität"
+      - "Stationärer, angeschlossener Ventilanschluss"
+      - "Sicher umreifte, abnehmbare Rolle"
+      - "Einfache Fertigung und Wartung"
+
+  koordinatensystem:
+    einheiten: "mm"
+    achsen:
+      X: "Spindel-/Drehachse; Rückseite/Bohrschrauberseite = -X; Entnahmeseite = +X"
+      Y: "Seitliche horizontale Achse; Ventilseite = -Y"
+      Z: "Vertikal; +Z nach oben"
+    bezugsebenen:
+      boden: "Z = 0,0"
+      spindelmittellinie: "Y = 0,0; Z = 150,0"
+      vorderflaeche_hinterer_flansch: "X = 0,0"
+    regel: "Alle Komponenten, Bohrungen, Befestiger und Verbindungen müssen in diesem System eindeutig positioniert sein. Änderungen sind zu dokumentieren."
+
+  ausgangsgeometrie_v1_0:
+    status: "Ausgangswerte aus der bereitgestellten technischen Spezifikation; nicht automatisch als fertigungsgerecht bestätigt."
+    farbpalette_rgba:
+      aluminium: [205, 208, 212, 255]
+      grau: [190, 190, 185, 255]
+      tuerkis: [60, 150, 130, 255]
+      rot: [205, 60, 45, 255]
+      stahl: [125, 130, 135, 255]
+      zink: [170, 175, 180, 255]
+      schwarz: [30, 30, 32, 255]
+      band: [55, 55, 58, 255]
+      blau: [40, 100, 200, 255]
+
+    rotierende_baugruppe:
+      hinterer_flansch_hub:
+        anzahl: 1
+        scheibe_aussendurchmesser_mm: 220
+        scheibendicke_mm: 3
+        x_bereich_mm: [0, 3]
+        mittelbohrung_durchmesser_mm: 18.4
+        erleichterungsbohrungen: "6 x Ø18 mm auf Teilkreisradius 82 mm bei 0°, 60°, 120°, 180°, 240°, 300°"
+        trommelbefestigung: "6 x Ø5,5 mm auf Teilkreisradius 38 mm bei 30°, 90°, 150°, 210°, 270°, 330°"
+        angeschweisster_nabenring:
+          aussendurchmesser_mm: 44
+          innendurchmesser_mm: 17.8
+          x_bereich_mm: [-18, 0]
+      trommel:
+        anzahl: 1
+        wandstaerke_mm: 2.0
+        hintere_montagescheibe:
+          x_bereich_mm: [3, 6]
+          radialbereich_mm: [9, 52]
+          bohrungen: "6 x Ø5,5 mm auf Teilkreisradius 38 mm bei 30°, 90°, 150°, 210°, 270°, 330°"
+        konischer_mantel:
+          x_start_mm: 3
+          x_ende_mm: 113
+          hinterer_aussenradius_mm: 52.0
+          hinterer_innenradius_mm: 50.0
+          vorderer_aussenradius_mm: 48.15
+          vorderer_innenradius_mm: 46.15
+          taper_winkel_grad: 2.0
+          urspruengliche_radiusformel: "R(x) = 52,0 - (3,85 / 110,0) * (x - 3,0)"
+          warnung: "Die Formel, die angegebenen Endradien und der nominelle 2°-Winkel sind geometrisch gegenzuprüfen. Nicht stillschweigend vermischen."
+      bandrolle:
+        anzahl: 1
+        urspruengliche_vierbandannahme: true
+        bandbreite_mm: 25
+        nutbreite_mm: 1
+        bandpositionen: "Band i = 0..3: X von 6,5 + 26*i bis 31,5 + 26*i"
+        gesamte_x_spanne_mm: [6.5, 109.5]
+        angenommener_aussenradius_mm: 97
+        angenommener_aussendurchmesser_mm: 194
+        status: "Nicht bestätigt. Für ein einziges durchgehendes 25-mm-Band neu berechnen; vier nebeneinanderliegende Bänder nicht ungeprüft beibehalten."
+      vorderflansch:
+        anzahl: 1
+        aussendurchmesser_mm: 220
+        x_bereich_mm: [113, 116]
+        mittelbohrung_mm: 20
+        erleichterungsbohrungen: "6 x Ø18 mm auf Teilkreisradius 82 mm"
+        hinweis: "Keine Trommelschraubenbohrungen in der ursprünglichen Definition."
+      haltescheibe:
+        anzahl: 1
+        innenradius_mm: 8.7
+        aussenradius_mm: 17.0
+        x_bereich_mm: [117, 119]
+      sicherungspin:
+        anzahl: 1
+        schaft_radius_mm: 3.0
+        achse: "Z"
+        z_bereich_mm: [135, 165]
+        x_mm: 122
+        y_mm: 0
+        zugring:
+          haupt_radius_mm: 7.0
+          rohr_radius_mm: 1.5
+          mittelpunkt_z_mm: 172
+
+    spindel_und_lager:
+      spindel:
+        anzahl: 1
+        urspruenglicher_schaftdurchmesser_mm: 16.8
+        schaft_x_bereich_mm: [-84, 128]
+        bohrschrauber_antriebsstummel:
+          form: "3/8-Zoll, drei Flächen/Sechskant laut Ausgangsspezifikation"
+          radius_mm: 4.75
+          x_bereich_mm: [-120, -84]
+      lager:
+        typ_urspruenglich: "6003-2RS Rillenkugellager"
+        nennbohrung_mm: 17
+        aussendurchmesser_mm: 35
+        breite_mm: 10
+        modellierte_radien_mm: "Innenradius 8,5 mm und Außenradius 17,5 mm laut Ausgangsspezifikation"
+        lagerpositionen:
+          hinten_x_mm: [-84, -74]
+          vorne_x_mm: [-34, -24]
+      lagergehaeuse:
+        rohr:
+          innenradius_mm: 17.5
+          aussenradius_mm: 26
+          x_bereich_mm: [-84, -28]
+        montageflansch:
+          innenradius_mm: 17.5
+          aussenradius_mm: 34
+          x_bereich_mm: [-28, -24]
+          befestigung: "4 x Ø5,5 mm auf Teilkreisradius 28 mm bei 45°, 135°, 225°, 315°"
+      lagerabstandshalter:
+        innenradius_mm: 8.5
+        aussenradius_mm: 12
+        x_bereich_mm: [-74, -34]
+      konflikt: >
+        Die Ausgangsangaben für Lager, Lagergehäuse und Spindel sind nicht konsistent:
+        Ein Lager 6003 hat nominell 17 mm Innen- und 35 mm Außendurchmesser; das angegebene
+        Gehäuse-Rohr mit Innenradius 17,5 mm beschreibt keine passende 35-mm-Lagersitzbohrung.
+        Lager-/Wellenpassungen und Gehäuse müssen anhand realer Lagerdaten neu ausgelegt werden.
+
+    rahmen_und_fuehrung:
+      chassisplatte:
+        anzahl: 1
+        x_bereich_mm: [-24, -20]
+        y_bereich_mm: [-75, 75]
+        z_bereich_mm: [65, 235]
+        bohrungen:
+          spindelfreiraum: "Ø24 mm bei Y=0, Z=150"
+          lagergehaeuse: "4 x Ø5,5 mm auf Teilkreisradius 28 mm um (Y=0, Z=150), Winkel 45°, 135°, 225°, 315°"
+          beinbefestigung: "4 x Ø5,5 mm bei (Y=±55, Z=75) und (Y=±55, Z=100)"
+          fuehrungsarm: "2 x Ø5,5 mm bei (Y=0, Z=212) und (Y=0, Z=228)"
+      fuehrungsarm:
+        anzahl: 1
+        x_bereich_mm: [-28, -24]
+        y_bereich_mm: [-8, 8]
+        z_bereich_mm: [205, 300]
+        bohrungen: "2 x Ø5,5 mm bei Z=212 und Z=228"
+      fuehrungsachse_v1:
+        durchmesser_mm: 8
+        x_bereich_mm: [-28, 128]
+        y_mm: 0
+        z_mm: 285
+        status: "Als zu schwach kritisiert; rechnerisch neu auslegen."
+      fuehrungsrolle_v1:
+        innenradius_mm: 4.2
+        aussenradius_mm: 12
+        x_bereich_mm: [-14, 118]
+        status: "Geometrie und Lagerung neu auslegen."
+      beinleisten:
+        links_x_mm: [-28, -24]
+        links_y_mm: [45, 65]
+        rechts_x_mm: [-28, -24]
+        rechts_y_mm: [-65, -45]
+        z_bereich_mm: [28, 110]
+      quertraeger:
+        x_bereich_mm: [-34, -14]
+        y_bereich_mm: [-120, 120]
+        z_bereich_mm: [8, 28]
+      bodenschienen:
+        x_bereich_mm: [-34, 206]
+        links_y_mm: [85, 105]
+        rechts_y_mm: [-105, -85]
+        z_bereich_mm: [28, 48]
+      fussplatte:
+        x_bereich_mm: [-154, -14]
+        y_bereich_mm: [-50, 50]
+        z_bereich_mm: [6, 8]
+        rutschhemmende_rippen: "4 Rippen, je 4 mm breit in X, Zentren bei X=-146, -116, -86, -56; Y=-50..50; Z=8..12"
+      vordere_fuesse:
+        anzahl: 2
+        radius_mm: 12
+        positionen: "X=196, Y=±95, Z=0..28"
+      hintere_pads:
+        anzahl: 2
+        radius_mm: 10
+        positionen: "X=-24, Y=±110, Z=0..8"
+
+    bohrschrauber_platzhalter:
+      spannfutter_radius_mm: 18
+      spannfutter_x_bereich_mm: [-150, -120]
+      motor_gehaeuse_x_bereich_mm: [-260, -150]
+      motor_gehaeuse_y_bereich_mm: [-26, 26]
+      motor_gehaeuse_z_bereich_mm: [118, 190]
+      roter_akzent_x_bereich_mm: [-260, -200]
+      roter_akzent_y_bereich_mm: [-27, 27]
+      roter_akzent_z_bereich_mm: [146, 168]
+      griff_x_bereich_mm: [-230, -185]
+      griff_y_bereich_mm: [-18, 18]
+      griff_z_bereich_mm: [60, 118]
+      akkupack_x_bereich_mm: [-255, -170]
+      akkupack_y_bereich_mm: [-30, 30]
+      akkupack_z_bereich_mm: [28, 60]
+      hinweis: "Nur Platzhaltergeometrie. Exakte Abmessungen anhand des realen CIDLI12206 und Akkus aufnehmen."
+
+    ventil_und_bandweg_platzhalter:
+      bandende_kontrollpunkte:
+        - [58, 0, 248]
+        - [58, 0, 300]
+        - [58, -50, 304]
+        - [58, -150, 160]
+        - [58, -250, 12]
+      bandbreite_mm: 25
+      banddicke_modell_mm: 2
+      versorgungsrohr:
+        radius_mm: 14
+        achse: "Y"
+        start_xyz_mm: [58, -262, 16]
+        ende_xyz_mm: [58, -340, 16]
+      ventilgriff:
+        x_bereich_mm: [54, 62]
+        y_bereich_mm: [-310, -290]
+        z_bereich_mm: [32, 36]
+        stiel_radius_mm: 4
+        stiel_z_bereich_mm: [28, 32]
+        stiel_mittelpunkt_xy_mm: [58, -300]
+      hinweis: "Die Koordinaten sind ursprüngliche Platzhalter und beweisen nicht, dass der Bandweg bei rotierender Trommel funktioniert."
+
+  urspruengliche_befestiger:
+    standard_m5:
+      schluesselweite_mm: 8
+      kopfhoehe_mm: 3.5
+      schaft_radius_mm: 2.5
+      mutter_schluesselweite_mm: 8
+      mutter_dicke_mm: 4
+      unterlegscheibe_aussendurchmesser_mm: 10
+      unterlegscheibe_innenradius_mm: 2.6
+      unterlegscheibe_aussenradius_mm: 5
+      unterlegscheibe_dicke_mm: 1
+    standard_m6:
+      schluesselweite_mm: 10
+      kopfhoehe_mm: 4
+      schaft_radius_mm: 3
+      mutter_schluesselweite_mm: 10
+      mutter_dicke_mm: 5
+      unterlegscheibe_aussendurchmesser_mm: 12
+      unterlegscheibe_dicke_mm: 1.6
+    urspruengliche_positionen:
+      lagergehaeuse: "4 x M5, Richtung +X, Schaftlänge 13 mm, Kopfunterseite X=-29; Teilkreisradius 28 mm, Winkel 45°, 135°, 225°, 315°; Scheiben X=-29..-28; Muttern X=-20..-16"
+      beine: "4 x M5, Richtung +X, Schaftlänge 13 mm, Positionen (Y=±55, Z=75) und (Y=±55, Z=100); Kopfunterseite X=-28; Muttern X=-20..-16"
+      fuehrungsarm: "2 x M5, Richtung +X, Schaftlänge 13 mm, Positionen (Y=0, Z=212) und (Y=0, Z=228); Kopfunterseite X=-28; Muttern X=-20..-16"
+      trommel_hinterflansch: "6 x M5-Schrauben, Richtung +X, Schaftlänge 11 mm, Kopfunterseite X=0, Teilkreisradius 38 mm, Winkel 30°, 90°, 150°, 210°, 270°, 330°; Muttern X=6..10"
+      bodenschienen: "2 x M6, ursprünglich Richtung -Z, Schaftlänge 44 mm, Kopfunterseite Z=48, X=-24, Y=±95; Muttern Z=3..8"
+      fussplatte: "2 x M6, ursprünglich Richtung -Z, Schaftlänge 24 mm, Kopfunterseite Z=28, X=-24, Y=±30; Muttern Z=1..6"
+    regel: >
+      Diese Befestigerangaben sind ein Ausgangsregister und müssen auf Vollständigkeit,
+      tatsächliche Lochgeometrie, Gewindeeingriff, Montagezugang, Festigkeitsklasse und
+      Kollisionsfreiheit geprüft werden. Die ursprüngliche Stückzahlbeschreibung ist nicht
+      als vollständige Fertigungsstückliste zu behandeln.
+
+  v2_0_aenderungsvorschlaege_aus_baseline:
+    status: "Vorgeschlagene Korrekturen; vor Übernahme rechnerisch und konstruktiv prüfen."
+    - id: "REV-01"
+      thema: "Umreifungszugang"
+      vorschlag: "3 radiale Schlitze mit 16 mm Breite bei 0°, 120°, 240° in beiden Flanschen, radial von R=110 bis R=46; passende Trommelkanäle 16 mm breit und 6 mm tief."
+      pruefung: "Festigkeit der Flansche und Trommel, Bandkontakt, Gurtzugang, Kantenradien und Entnahme prüfen."
+    - id: "REV-02"
+      thema: "Kragarm-Führungsachse"
+      vorschlag: "Führungsachse auf Ø16 mm erhöhen; Führungsarmdicke auf 8 mm erhöhen; zwei 6002-2RS-Lager in der Führungsrolle prüfen."
+      pruefung: "Biegung, Lagerabstand, Wellenlagerung, Masse und tatsächliche Montage prüfen."
+    - id: "REV-03"
+      thema: "Spindel und Drehmomentverbindung"
+      vorschlag: "Wellen-/Lagersitz Ø17,00 mm, Nabenbohrung Ø17,05 mm; Querschraube M6 oder 6-mm-Feder-/Passstift bei X=-9 mm erwägen."
+      pruefung: "Passungen, Querschnittsschwächung, Scherung, Ermüdung, Demontage und Drehmomentkapazität berechnen."
+    - id: "REV-04"
+      thema: "Reaktionsmoment am Bohrschrauber"
+      vorschlag: "Am Rahmen befestigte, geeignete Halterung für den Bohrschraubergriff."
+      pruefung: "Reaktionsmoment, sichere Befestigung, Triggerzugang, Akkuwechsel und unbeabsichtigtes Anlaufen prüfen."
+    - id: "REV-05"
+      thema: "Bodenfreiheit"
+      vorschlag: "Keine freiliegenden Muttern oder Schrauben, die fast auf Bodenniveau liegen; Befestigungsrichtung ändern oder geeignete Rahmenverbindung einsetzen."
+      pruefung: "Bodenfreiheit, Wartung, Montage und Festigkeit prüfen."
+    - id: "REV-06"
+      thema: "Bandführung"
+      vorschlag: "Drei Führungskragen oder ein Vierpositionsschieber an Bandmitten X=19, 45, 71, 97 mm erwägen."
+      pruefung: "Nur anwenden, wenn eine einzelne Bandbahn oder eine validierte Traverse diese Positionen sinnvoll nutzt. Mit 25-mm-Bandbreite und Trommelbreite abgleichen."
+    - id: "REV-07"
+      thema: "Ventilgriff-Stiel"
+      vorschlag: "Ursprüngliche 2-mm-Lücke durch einen Stiel mit Radius 4 mm von Z=28 bis Z=32 schließen."
+      pruefung: "Nur relevant, falls diese Platzhaltergeometrie im finalen Ventilmodell beibehalten wird."
+
+  rechenmodelle:
+    urspruengliche_gleichungen:
+      trommelbreite: "W_drum = N_bands * W_tape + (N_bands - 1) * 1,0 + 7,0"
+      rollenradius: "R_coil = sqrt(R_core^2 + (L_tape * t_tape) / (pi * N_bands * eta))"
+      flanschdurchmesser: "D_flange = 2 * (R_coil + 13,0)"
+      spindelmittenhoehe: "Z_c = D_flange / 2 + 40,0"
+      parameter:
+        bandbreite_mm: 25.0
+        effektive_staerke_mm: 1.5
+        bandlaenge_mm: 40000
+        packungsfaktor: 0.70
+        urspruengliche_bahnanzahl: 4
+        kernradius_mm: 50.0
+    pflicht:
+      - "Gleichungen mit Einheiten prüfen."
+      - "Wickelkapazität für eine einzelne durchgehende Bandbahn neu berechnen."
+      - "Effektive Bandstärke und Packungsfaktor anhand realer Messungen oder klar gekennzeichneter Annahmen begründen."
+      - "Konischen Kern, variable Radien, nutzbare Breite, Flanschfreiraum und Strapping-Geometrie berücksichtigen."
+      - "Drehzahl-/Zeitmodell mit wachsendem Wickelradius berechnen."
+      - "Bandzug und Drehmoment nicht ohne Messwerte oder begründete konservative Annahmen festlegen."
+      - "Ergebnisse in Excel mit Formeln und Einheiten offenlegen."
+
+  geforderte_artefakte:
+    1_html_projektseite:
+      datei: "Navaneeth_Compact_40M_Project.html"
+      inhalt:
+        - "Projektübersicht, Anforderungen, technische Daten und offene Risiken"
+        - "Navigierbare Baugruppen- und Komponentenliste"
+        - "Verlinkte Zeichnungen und Berechnungen"
+    2_pdf_ingenieurbericht:
+      datei: "Navaneeth_Compact_40M_Engineering_Report_DE.pdf"
+      inhalt:
+        - "Projektziel und Anforderungen"
+        - "Alle Ausgangsmaße und Koordinaten"
+        - "Änderungsprotokoll"
+        - "Geometrie- und Kapazitätsberechnungen"
+        - "Spindel-, Lager-, Antriebs- und Rahmenauslegung"
+        - "Bandweg und Ventilanschluss"
+        - "Umreifung und Rollenentnahme"
+        - "BOM, Fastener-Register und Massenbudget"
+        - "Montage- und Wartungsanleitung"
+        - "Validierungsstatus und offene Risiken"
+    3_excel:
+      datei: "Navaneeth_Compact_40M_Calculations_BOM_DE.xlsx"
+      tabellenblaetter:
+        - "Parameter_und_Einheiten"
+        - "Geometrie"
+        - "Wickelkapazitaet"
+        - "Drehzahl_und_Zeit"
+        - "Drehmoment_und_Kraefte"
+        - "Welle_und_Lager"
+        - "Rahmen_und_Festigkeit"
+        - "Massenbudget"
+        - "BOM"
+        - "Fastener_Register"
+        - "Verbindungen"
+        - "Validierung_und_Risiken"
+      regel: "Berechnungen mit nachvollziehbaren Formeln, Eingabewerten, Einheiten, Quellen und Kennzeichnung unsicherer Annahmen."
+    4_html_interaktiver_cad_viewer:
+      datei: "Navaneeth_Compact_40M_Interactive_CAD.html"
+      funktionen:
+        - "3D-Ansicht mit Drehen, Zoomen und Verschieben"
+        - "Drehanimation der rotierenden Baugruppe"
+        - "Zeitgesteuerte Wickelanimation mit sichtbar wachsendem Wickelradius"
+        - "Explosionsansicht mit steuerbarem Explosionsgrad"
+        - "Komponentenbaum und Einzelteil-Sichtbarkeit"
+        - "Auswahl jedes Einzelteils und Anzeige von ID, Material, Abmessungen und Masse"
+        - "Auswahl jedes Befestigers und Anzeige von Position, Richtung, Norm und verbundenen Teilen"
+        - "Anzeige von Verbindungs-/Mating-Daten"
+        - "Montage- und Demontageschritte"
+        - "Schnittansicht und Kollisionshinweise, sofern technisch implementiert"
+        - "Download-/Exportstatus"
+      regel: "Interaktionen müssen echte Bauteildaten verwenden; keine dekorativen, nicht funktionierenden Schaltflächen."
+    5_cad_und_exports:
+      gefordert:
+        - "Editierbare native CAD-Datei oder reproduzierbare parametrische CAD-Skripte"
+        - "STEP-Baugruppe"
+        - "STEP-Einzelteile, soweit unterstützt"
+        - "Zusammengebautes GLB"
+        - "Explodiertes GLB"
+        - "Einzelne STL-Dateien"
+        - "Bemaßte PDF-Zeichnungen für alle Fertigungsteile"
+        - "Baugruppenzeichnungen und Explosionszeichnungen"
+        - "Montageanleitung"
+        - "Vollständige BOM und Befestigerliste"
+        - "Änderungsprotokoll"
+        - "Prüfbericht"
+    6_zip:
+      datei: "Navaneeth_Compact_40M_v2.0_COMPLETE_PACKAGE.zip"
+      regel: "Alle Dateien müssen zur gleichen Revision gehören; keine veralteten Teile oder Listen."
+
+  detailanforderungen_fuer_jedes_bauteil:
+    pflichtfelder:
+      - "Eindeutige Teilenummer und Instanz-ID"
+      - "Bezeichnung"
+      - "Anzahl"
+      - "Material und Werkstoffzustand, soweit bekannt"
+      - "Herstellungsverfahren"
+      - "Hauptabmessungen"
+      - "Bohrungen, Gewinde, Passungen und Toleranzen"
+      - "XYZ-Position und Orientierung"
+      - "Verbundene Bauteile"
+      - "Befestiger-IDs"
+      - "Masse pro Stück und Gesamtmasse"
+      - "Zeichnungsreferenz"
+      - "Montage- und Demontageschritte"
+    befestiger_register_plichtfelder:
+      - "Eindeutige ID pro Befestigerinstanz"
+      - "Norm und Gewinde"
+      - "Durchmesser, Steigung, Länge und Kopfform"
+      - "Scheiben- und Mutternspezifikation"
+      - "Werkstoff und Festigkeitsklasse"
+      - "XYZ-Mittelpunkt und Achsrichtung"
+      - "Einbaurichtung"
+      - "Komponenten, die verbunden werden"
+      - "Montagezugang"
+      - "Anziehdrehmoment nur bei belastbarer Grundlage"
+    verbindungsregister_plichtfelder:
+      - "Verbindungs-ID"
+      - "Bauteil A und Bauteil B"
+      - "Verbindungstyp"
+      - "Mating-Flächen und Achsen"
+      - "Maße, Passung und Spiel"
+      - "Befestiger-IDs"
+      - "Belastungsannahmen"
+      - "Montagereihenfolge"
+      - "Prüfmethode"
+
+  phasenplan:
+    - phase: 1
+      name: "ZIP- und Quellcode-Audit"
+      ergebnis: "Dateiinventar, Geometrieaudit, Liste widersprüchlicher Maße"
+    - phase: 2
+      name: "Parameter- und Anforderungsbaseline"
+      ergebnis: "Eindeutige Maße, offene Annahmen und freigegebene Berechnungsparameter"
+    - phase: 3
+      name: "Mechanische Validierung"
+      ergebnis: "Nachvollziehbare Wickel-, Wellen-, Lager-, Antriebs-, Rahmen- und Bandweg-Berechnungen"
+    - phase: 4
+      name: "Detaillierte parametrische CAD-Konstruktion"
+      ergebnis: "Jedes Teil, jedes Loch, jeder Befestiger und jede Verbindung modelliert"
+    - phase: 5
+      name: "Baugruppen und Zeichnungen"
+      ergebnis: "Montierte Baugruppe, Unterbaugruppen, Explosionsansichten, bemaßte Zeichnungen"
+    - phase: 6
+      name: "Dokumentation und Berechnungsdateien"
+      ergebnis: "HTML-Projektseite, PDF-Bericht, Excel-Berechnungen und BOM"
+    - phase: 7
+      name: "Interaktiver CAD-Viewer"
+      ergebnis: "Echte Komponentenwahl, Animationen, Explosionsansicht und Bauteilinformationen"
+    - phase: 8
+      name: "Prüfung und Paketierung"
+      ergebnis: "Konsistentes ZIP, Geometriechecks, Dateiinventar und dokumentierter Freigabestatus"
+
+  freigabekriterien:
+    - "Jedes Teil hat eine eindeutige ID und einen definierten Transform."
+    - "Jeder Befestiger im Modell ist im Befestigerregister enthalten und umgekehrt."
+    - "Alle Befestiger fluchten mit ihren Bohrungen und haben Montagezugang."
+    - "Lager, Wellen und Gehäuse haben kompatible, herstellerbasierte Maße und Passungen."
+    - "Keine unbeabsichtigten Kollisionen; bewegte Teile besitzen notwendige Freiräume."
+    - "Die Trommel kann sich drehen und die vordere Flanscheinheit lässt sich entfernen."
+    - "Die umreifte Rolle hat einen freien Entnahmepfad."
+    - "Der stationäre Ventilanschluss bleibt beim Wickeln unbelastet und angeschlossen."
+    - "Der Bohrschrauber ist gegen Reaktionsmoment gesichert."
+    - "Massenbudget enthält alle benötigten Komponenten."
+    - "BOM, CAD-Baugruppe, GLB, STEP, STL und Zeichnungen gehören zur gleichen Revision."
+    - "HTML-Schaltflächen und Auswahlfunktionen führen die dokumentierten Aktionen tatsächlich aus."
+    - "Ungeklärte sicherheitskritische Punkte sind sichtbar und verhindern eine falsche Fertigungsfreigabe."
+    - "CAD-Prüfungen, Berechnungen und physische Tests werden separat ausgewiesen."
+
+  lieferbericht:
+    erforderlich:
+      - "Zusammenfassung der Änderungen gegenüber v1.0"
+      - "Liste aller erzeugten Dateien"
+      - "Komponenten- und Befestigeranzahl"
+      - "Massenbudget mit Annahmen"
+      - "Ergebnisse der CAD- und Konsistenzprüfungen"
+      - "Offene Risiken und noch erforderliche physische Tests"
+    schlussregel: >
+      Nicht nur einen Plan oder einen schönen Render liefern. Die vorhandenen Quell- und Modelldateien
+      tatsächlich überarbeiten und alle unterstützten Artefakte erzeugen. Wenn ein Format nicht
+      erzeugt werden kann, die Einschränkung klar nennen. Keine mechanische oder physische Validierung
+      behaupten, die nicht durchgeführt und dokumentiert wurde.
